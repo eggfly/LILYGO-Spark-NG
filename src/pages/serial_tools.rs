@@ -107,11 +107,27 @@ impl SparkApp {
                     .bg(rgb(0x0d1117))
                     .p_4()
                     .overflow_y_scroll()
+                    .flex()
+                    .flex_col()
+                    .gap(px(2.0))
                     .child(
                         div()
                             .text_xs()
-                            .text_color(hsla(140. / 360., 0.6, 0.6, 0.9))
+                            .text_color(hsla(140. / 360., 0.6, 0.6, 0.7))
                             .child("// Serial Monitor - Connect a device to start"),
+                    )
+                    .child(
+                        div().text_xs().text_color(hsla(140. / 360., 0.6, 0.6, 0.4)).child("// Supported baud rates: 9600, 115200, 230400, 460800, 921600"),
+                    )
+                    .child(
+                        div().text_xs().text_color(hsla(140. / 360., 0.6, 0.6, 0.4)).child("// Auto-detection for common errors: PSRAM, Brownout, Guru Meditation"),
+                    )
+                    .child(div().h(px(8.0)))
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(hsla(0., 0., 0.5, 0.3))
+                            .child("Waiting for connection..."),
                     ),
             )
             // Input bar

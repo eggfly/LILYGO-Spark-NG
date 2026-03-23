@@ -6,18 +6,19 @@ use crate::theme::*;
 struct CommunityLink {
     icon: &'static str,
     name: &'static str,
+    description: &'static str,
     url: &'static str,
     gradient_from: u32,
     gradient_to: u32,
 }
 
 const LINKS: &[CommunityLink] = &[
-    CommunityLink { icon: "🌐", name: "Official Website", url: "lilygo.cc", gradient_from: GREEN, gradient_to: 0x0d9488 },
-    CommunityLink { icon: "🐙", name: "GitHub", url: "github.com/Xinyuan-LilyGO", gradient_from: 0x475569, gradient_to: 0x1e293b },
-    CommunityLink { icon: "📖", name: "Wiki", url: "wiki.lilygo.cc", gradient_from: AMBER, gradient_to: 0xea580c },
-    CommunityLink { icon: "🛍", name: "Taobao Store", url: "shop140839766.taobao.com", gradient_from: 0xf97316, gradient_to: 0xe11d48 },
-    CommunityLink { icon: "🏪", name: "AliExpress", url: "lilygo.aliexpress.com", gradient_from: RED, gradient_to: 0xe11d48 },
-    CommunityLink { icon: "👥", name: "Community Forum", url: "community.lilygo.cc", gradient_from: 0x8b5cf6, gradient_to: 0x7c3aed },
+    CommunityLink { icon: "🌐", name: "Official Website", description: "Product catalog and news", url: "lilygo.cc", gradient_from: GREEN, gradient_to: 0x0d9488 },
+    CommunityLink { icon: "🐙", name: "GitHub", description: "Source code and examples", url: "github.com/Xinyuan-LilyGO", gradient_from: 0x475569, gradient_to: 0x1e293b },
+    CommunityLink { icon: "📖", name: "Wiki", description: "Documentation and tutorials", url: "wiki.lilygo.cc", gradient_from: AMBER, gradient_to: 0xea580c },
+    CommunityLink { icon: "🛍", name: "Taobao Store", description: "Official Taobao shop", url: "shop140839766.taobao.com", gradient_from: 0xf97316, gradient_to: 0xe11d48 },
+    CommunityLink { icon: "🏪", name: "AliExpress", description: "International store", url: "lilygo.aliexpress.com", gradient_from: RED, gradient_to: 0xe11d48 },
+    CommunityLink { icon: "👥", name: "Community Forum", description: "Discussions and support", url: "community.lilygo.cc", gradient_from: 0x8b5cf6, gradient_to: 0x7c3aed },
 ];
 
 impl SparkApp {
@@ -111,6 +112,9 @@ impl SparkApp {
                     .gap(px(2.0))
                     .child(
                         div().text_sm().text_color(rgb(TEXT_PRIMARY)).child(link.name.to_string()),
+                    )
+                    .child(
+                        div().text_xs().text_color(rgb(TEXT_SECONDARY)).child(link.description.to_string()),
                     )
                     .child(
                         div().text_xs().text_color(rgb(TEXT_MUTED)).child(link.url.to_string()),

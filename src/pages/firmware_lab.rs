@@ -35,6 +35,58 @@ impl SparkApp {
                     .p_6()
                     .gap_4()
                     .overflow_y_scroll()
+                    // Mode toggle row
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_1()
+                                    .p(px(2.0))
+                                    .rounded_lg()
+                                    .bg(hsla(0., 0., 0., 0.15))
+                                    .child(
+                                        div()
+                                            .px_3()
+                                            .py(px(6.0))
+                                            .rounded_md()
+                                            .bg(rgb(PRIMARY))
+                                            .text_xs()
+                                            .text_color(rgb(0xffffff))
+                                            .cursor_pointer()
+                                            .child("Basic"),
+                                    )
+                                    .child(
+                                        div()
+                                            .px_3()
+                                            .py(px(6.0))
+                                            .rounded_md()
+                                            .text_xs()
+                                            .text_color(rgb(TEXT_MUTED))
+                                            .cursor_pointer()
+                                            .hover(|s| s.text_color(rgb(TEXT_PRIMARY)))
+                                            .child("Advanced"),
+                                    ),
+                            )
+                            .child(
+                                div()
+                                    .px_3()
+                                    .py(px(6.0))
+                                    .rounded_lg()
+                                    .bg(hsla(0., 0., 0., 0.15))
+                                    .border_1()
+                                    .border_color(glass_border())
+                                    .text_xs()
+                                    .text_color(rgb(TEXT_MUTED))
+                                    .cursor_pointer()
+                                    .hover(|s| s.text_color(rgb(TEXT_PRIMARY)))
+                                    .child("👁 Preview"),
+                            ),
+                    )
                     // Controls row
                     .child(
                         div()

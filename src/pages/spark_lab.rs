@@ -38,6 +38,51 @@ impl SparkApp {
             .flex_1()
             .flex()
             .flex_col()
+            .overflow_hidden()
+            // Tab header
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .px_4()
+                    .py_2()
+                    .border_b_1()
+                    .border_color(glass_border())
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .px_4()
+                            .py_2()
+                            .rounded_lg()
+                            .bg(hsla(270. / 360., 0.5, 0.5, 0.15))
+                            .text_color(rgb(PRIMARY))
+                            .text_sm()
+                            .cursor_pointer()
+                            .child("✨ Sparkling List"),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .px_4()
+                            .py_2()
+                            .rounded_lg()
+                            .text_color(rgb(TEXT_MUTED))
+                            .text_sm()
+                            .cursor_pointer()
+                            .hover(|s| s.bg(hsla(0., 0., 0.5, 0.05)))
+                            .child("📖 Guide"),
+                    ),
+            )
+            // Content
+            .child(div()
+            .flex_1()
+            .flex()
+            .flex_col()
             .p_6()
             .gap_6()
             .id("spark-lab-page")
@@ -82,7 +127,8 @@ impl SparkApp {
             )
             // Categories
             .child(Self::spark_category("🔧 Flash & Firmware Management", FLASH_ITEMS))
-            .child(Self::spark_category("🔌 Device Interaction", DEVICE_ITEMS))
+            .child(Self::spark_category("🔌 Device Interaction", DEVICE_ITEMS)),
+            )
     }
 
     fn status_pill(label: &str, count: usize, color: u32) -> Div {
