@@ -1,16 +1,33 @@
 use gpui::*;
 
+use crate::manifest::{self, FlatProduct, FirmwareItem, Manifest};
 use crate::pages::Page;
 use crate::theme::*;
 
 pub struct SparkApp {
     pub current_page: Page,
+    pub manifest: Manifest,
+    pub flat_products: Vec<FlatProduct>,
+    pub selected_product_idx: Option<usize>,
+    pub selected_firmwares: Vec<FirmwareItem>,
+    pub search_query: String,
+    pub only_with_firmware: bool,
+    pub manifest_loading: bool,
+    pub manifest_error: Option<String>,
 }
 
 impl SparkApp {
     pub fn new() -> Self {
         Self {
             current_page: Page::FirmwareCenter,
+            manifest: Manifest::default(),
+            flat_products: Vec::new(),
+            selected_product_idx: None,
+            selected_firmwares: Vec::new(),
+            search_query: String::new(),
+            only_with_firmware: true,
+            manifest_loading: true,
+            manifest_error: None,
         }
     }
 
@@ -18,13 +35,84 @@ impl SparkApp {
         self.current_page = page;
         cx.notify();
     }
+
+    pub fn load_manifest(&mut self, cx: &mut Context<Self>) {
+        self.manifest_loading = true;
+        self.manifest_error = None;
+        cx.notify();
+
+        // Try to load from the sibling LILYGO-Spark project
+        let manifest_paths = [
+            "../LILYGO-Spark/firmware_manifest.json".to_string(),
+            "firmware_manifest.json".to_string(),
+        ];
+
+        let mut loaded = false;
+        for path in &manifest_paths {
+            match manifest::load_manifest_from_file(path) {
+                Ok(m) => {
+                    log::info!("Loaded manifest from {} ({} product groups, {} firmwares)",
+                        path, m.product_list.len(), m.firmware_list.len());
+                    self.flat_products = m.flat_products();
+                    log::info!("Flattened to {} products", self.flat_products.len());
+                    self.manifest = m;
+                    self.manifest_loading = false;
+
+                    // Select first product
+                    if !self.flat_products.is_empty() {
+                        self.select_product(0);
+                    }
+                    loaded = true;
+                    break;
+                }
+                Err(e) => {
+                    log::warn!("Failed to load from {}: {}", path, e);
+                }
+            }
+        }
+
+        if !loaded {
+            self.manifest_loading = false;
+            self.manifest_error = Some("Could not find firmware_manifest.json".to_string());
+            log::error!("Failed to load manifest from any path");
+        }
+
+        cx.notify();
+    }
+
+    pub fn select_product(&mut self, idx: usize) {
+        self.selected_product_idx = Some(idx);
+        if let Some(product) = self.flat_products.get(idx) {
+            self.selected_firmwares = self.manifest.firmware_for_product(&product.product_id);
+            log::info!("Selected product: {} ({} firmwares)", product.name, self.selected_firmwares.len());
+        }
+    }
+
+    pub fn filtered_products(&self) -> Vec<(usize, &FlatProduct)> {
+        let q = self.search_query.to_lowercase();
+        self.flat_products.iter().enumerate().filter(|(_, p)| {
+            // Search filter
+            let matches_search = q.is_empty()
+                || p.name.to_lowercase().contains(&q)
+                || p.mcu.to_lowercase().contains(&q)
+                || p.series_name.as_ref().is_some_and(|s| s.to_lowercase().contains(&q));
+
+            // Firmware filter
+            let has_firmware = !self.only_with_firmware || {
+                !p.bin_files.is_empty()
+                    || self.manifest.firmware_list.iter().any(|f| f.supported_product_ids.contains(&p.product_id))
+            };
+
+            matches_search && has_firmware
+        }).collect()
+    }
 }
 
 impl Render for SparkApp {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let content: AnyElement = match self.current_page {
             Page::Discovery => self.render_discovery().into_any_element(),
-            Page::FirmwareCenter => self.render_firmware_center().into_any_element(),
+            Page::FirmwareCenter => self.render_firmware_center(cx).into_any_element(),
             Page::FirmwareLab => self.render_firmware_lab().into_any_element(),
             Page::SerialTools => self.render_serial_tools().into_any_element(),
             Page::EmbeddedTools => self.render_embedded_tools().into_any_element(),

@@ -4,39 +4,230 @@ use gpui::prelude::FluentBuilder;
 use crate::app::SparkApp;
 use crate::theme::*;
 
-struct ProductInfo {
-    name: &'static str,
-    mcu: &'static str,
-    description: &'static str,
-    firmware_count: usize,
+fn format_size(bytes: Option<u64>) -> String {
+    match bytes {
+        Some(b) if b >= 1024 * 1024 => format!("{:.1} MB", b as f64 / (1024.0 * 1024.0)),
+        Some(b) if b >= 1024 => format!("{:.1} KB", b as f64 / 1024.0),
+        Some(b) => format!("{} B", b),
+        None => "—".to_string(),
+    }
 }
-
-const PRODUCTS: &[ProductInfo] = &[
-    ProductInfo { name: "T-Display S3", mcu: "ESP32-S3", description: "1.9\" LCD, USB-C, Wi-Fi/BLE", firmware_count: 9 },
-    ProductInfo { name: "T-Display S3 AMOLED", mcu: "ESP32-S3", description: "1.91\" AMOLED, Touch, USB-C", firmware_count: 7 },
-    ProductInfo { name: "T-Deck", mcu: "ESP32-S3", description: "Keyboard, 2.8\" LCD, LoRa", firmware_count: 5 },
-    ProductInfo { name: "T-Watch S3", mcu: "ESP32-S3", description: "Wearable, Touch, IMU", firmware_count: 3 },
-    ProductInfo { name: "T-Beam Supreme", mcu: "ESP32-S3", description: "GPS, LoRa, Solar", firmware_count: 4 },
-    ProductInfo { name: "T-ETH-Lite", mcu: "ESP32-S3", description: "Ethernet, PoE, Wi-Fi", firmware_count: 2 },
-];
-
-struct FirmwareInfo {
-    name: &'static str,
-    version: &'static str,
-    fw_type: &'static str,
-    size: &'static str,
-    description: &'static str,
-}
-
-const FIRMWARES: &[FirmwareInfo] = &[
-    FirmwareInfo { name: "Factory Test", version: "v1.0.0", fw_type: "factory", size: "1.2 MB", description: "Official factory test firmware" },
-    FirmwareInfo { name: "LVGL Demo", version: "v9.2.0", fw_type: "lvgl", size: "2.8 MB", description: "LVGL graphics demo" },
-    FirmwareInfo { name: "MicroPython", version: "v1.23.0", fw_type: "micropython", size: "1.5 MB", description: "MicroPython runtime" },
-    FirmwareInfo { name: "Arduino Blink", version: "v1.0.0", fw_type: "bin", size: "256 KB", description: "Simple LED blink example" },
-];
 
 impl SparkApp {
-    pub fn render_firmware_center(&self) -> impl IntoElement {
+    pub fn render_firmware_center(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
+        let filtered = self.filtered_products();
+        let product_count = filtered.len();
+        let selected_idx = self.selected_product_idx;
+
+        // Get selected product info
+        let selected_name = selected_idx
+            .and_then(|i| self.flat_products.get(i))
+            .map(|p| p.name.clone())
+            .unwrap_or_else(|| "Select a product".to_string());
+        let selected_desc = selected_idx
+            .and_then(|i| self.flat_products.get(i))
+            .map(|p| p.description.clone())
+            .unwrap_or_default();
+        let selected_mcu = selected_idx
+            .and_then(|i| self.flat_products.get(i))
+            .map(|p| p.mcu.clone())
+            .unwrap_or_default();
+        let firmware_count = self.selected_firmwares.len();
+
+        // Build firmware items
+        let mut firmware_list = div().px_6().pb_6().flex().flex_col().gap_3();
+        for fw in &self.selected_firmwares {
+            let (badge_color, badge_bg) = match fw.fw_type.as_str() {
+                "factory" => (GREEN, hsla(150. / 360., 0.6, 0.4, 0.15)),
+                "micropython" => (AMBER, hsla(40. / 360., 0.7, 0.5, 0.15)),
+                "lvgl" => (PRIMARY, hsla(270. / 360., 0.5, 0.5, 0.15)),
+                _ => (TEXT_MUTED, hsla(0., 0., 0.3, 0.15)),
+            };
+            let size_str = format_size(fw.size);
+            let type_label = fw.fw_type.clone();
+            let fw_name = fw.name.clone();
+            let fw_version = fw.version.clone();
+            let fw_filename = fw.filename.clone();
+
+            firmware_list = firmware_list.child(
+                glass_card_div()
+                    .p_4()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .hover(|s| s.border_color(glass_border_hover()))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_1()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(div().text_color(rgb(TEXT_PRIMARY)).child(fw_name))
+                                    .child(
+                                        div()
+                                            .text_xs()
+                                            .px_2()
+                                            .py(px(2.0))
+                                            .rounded_md()
+                                            .bg(badge_bg)
+                                            .text_color(rgb(badge_color))
+                                            .child(type_label),
+                                    ),
+                            )
+                            .child(
+                                div().text_xs().text_color(rgb(TEXT_MUTED)).child(
+                                    format!("{} · {} · {}", fw_version, size_str, fw_filename),
+                                ),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .px_4()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .bg(hsla(220. / 360., 0.6, 0.5, 0.15))
+                            .text_sm()
+                            .text_color(rgb(0x3b82f6))
+                            .cursor_pointer()
+                            .hover(|s| s.bg(hsla(220. / 360., 0.6, 0.5, 0.25)))
+                            .child("⬇ Download"),
+                    ),
+            );
+        }
+
+        // Build product list
+        let mut product_list_div = div()
+            .id("product-list")
+            .flex_1()
+            .overflow_y_scroll()
+            .p_2()
+            .flex()
+            .flex_col()
+            .gap_1();
+
+        if self.manifest_loading {
+            // Loading skeleton
+            for i in 0..6 {
+                product_list_div = product_list_div.child(
+                    div()
+                        .id(SharedString::from(format!("skeleton-{}", i)))
+                        .flex()
+                        .items_center()
+                        .gap_3()
+                        .px_3()
+                        .py(px(10.0))
+                        .rounded_xl()
+                        .child(
+                            div()
+                                .w(px(48.0))
+                                .h(px(48.0))
+                                .rounded_lg()
+                                .bg(hsla(0., 0., 0., 0.15)),
+                        )
+                        .child(
+                            div()
+                                .flex_1()
+                                .flex()
+                                .flex_col()
+                                .gap_2()
+                                .child(
+                                    div().h(px(14.0)).w(px(120.0)).rounded_sm().bg(hsla(0., 0., 0., 0.15)),
+                                )
+                                .child(
+                                    div().h(px(10.0)).w(px(80.0)).rounded_sm().bg(hsla(0., 0., 0., 0.1)),
+                                ),
+                        ),
+                );
+            }
+        } else {
+            for (real_idx, product) in filtered {
+                let is_selected = selected_idx == Some(real_idx);
+                let idx = real_idx;
+
+                let mut item = div()
+                    .id(SharedString::from(format!("product-{}", idx)))
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .px_3()
+                    .py(px(10.0))
+                    .rounded_xl()
+                    .cursor_pointer()
+                    .hover(|s| s.bg(hsla(0., 0., 0.5, 0.05)));
+
+                if is_selected {
+                    item = item
+                        .bg(hsla(270. / 360., 0.4, 0.5, 0.10))
+                        .border_1()
+                        .border_color(hsla(270. / 360., 0.5, 0.5, 0.3))
+                        .shadow_lg();
+                }
+
+                // Product image placeholder
+                item = item.child(
+                    div()
+                        .w(px(48.0))
+                        .h(px(48.0))
+                        .rounded_lg()
+                        .bg(rgb(0xffffff))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .flex_none()
+                        .shadow_sm()
+                        .child(div().text_color(rgb(TEXT_MUTED)).child("📱")),
+                );
+
+                let name = product.name.clone();
+                let mcu = product.mcu.clone();
+                let mcu_for_badge = mcu.clone();
+
+                item = item.child(
+                    div()
+                        .flex_1()
+                        .flex()
+                        .flex_col()
+                        .gap(px(2.0))
+                        .child(
+                            div()
+                                .text_sm()
+                                .text_color(rgb(TEXT_PRIMARY))
+                                .when(is_selected, |d: Div| d.text_color(rgb(PRIMARY)))
+                                .child(name),
+                        )
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_2()
+                                .when(!mcu.is_empty(), |d: Div| {
+                                    d.child(
+                                        div()
+                                            .text_xs()
+                                            .px(px(6.0))
+                                            .py(px(1.0))
+                                            .rounded_sm()
+                                            .bg(hsla(270. / 360., 0.3, 0.3, 0.2))
+                                            .text_color(rgb(PRIMARY))
+                                            .child(mcu_for_badge),
+                                    )
+                                }),
+                        ),
+                );
+
+                item = item.on_click(cx.listener(move |this, _, _, cx| {
+                    this.select_product(idx);
+                    cx.notify();
+                }));
+
+                product_list_div = product_list_div.child(item);
+            }
+        }
+
         div()
             .flex_1()
             .flex()
@@ -61,7 +252,6 @@ impl SparkApp {
                             .flex()
                             .flex_col()
                             .gap_3()
-                            // Search input
                             .child(
                                 div()
                                     .flex()
@@ -73,10 +263,12 @@ impl SparkApp {
                                     .border_1()
                                     .border_color(glass_border())
                                     .child(
-                                        div().text_sm().text_color(rgb(TEXT_MUTED)).child("🔍 Search products..."),
+                                        div()
+                                            .text_sm()
+                                            .text_color(rgb(TEXT_MUTED))
+                                            .child("🔍 Search products..."),
                                     ),
                             )
-                            // Filter checkbox
                             .child(
                                 div()
                                     .flex()
@@ -92,7 +284,10 @@ impl SparkApp {
                                             .items_center()
                                             .justify_center()
                                             .child(
-                                                div().text_xs().text_color(rgb(0xffffff)).child("✓"),
+                                                div()
+                                                    .text_xs()
+                                                    .text_color(rgb(0xffffff))
+                                                    .child("✓"),
                                             ),
                                     )
                                     .child(
@@ -105,97 +300,11 @@ impl SparkApp {
                                         div()
                                             .text_xs()
                                             .text_color(rgb(TEXT_MUTED))
-                                            .child(format!("({} products)", PRODUCTS.len())),
+                                            .child(format!("({} products)", product_count)),
                                     ),
                             ),
                     )
-                    .child(
-                        // Product list
-                        {
-                            let mut list = div()
-                                .id("product-list")
-                                .flex_1()
-                                .overflow_y_scroll()
-                                .p_2()
-                                .flex()
-                                .flex_col()
-                                .gap_1();
-
-                            for (i, product) in PRODUCTS.iter().enumerate() {
-                                let is_selected = i == 0;
-                                let mut item = div()
-                                    .id(SharedString::from(format!("product-{}", i)))
-                                    .flex()
-                                    .items_center()
-                                    .gap_3()
-                                    .px_3()
-                                    .py(px(10.0))
-                                    .rounded_xl()
-                                    .cursor_pointer()
-                                    .hover(|s| s.bg(hsla(0., 0., 0.5, 0.05)));
-
-                                if is_selected {
-                                    item = item
-                                        .bg(hsla(270. / 360., 0.4, 0.5, 0.10))
-                                        .border_1()
-                                        .border_color(hsla(270. / 360., 0.5, 0.5, 0.3))
-                                        .shadow_lg();
-                                }
-
-                                // Product image placeholder
-                                item = item.child(
-                                    div()
-                                        .w(px(48.0))
-                                        .h(px(48.0))
-                                        .rounded_lg()
-                                        .bg(rgb(0xffffff))
-                                        .flex()
-                                        .items_center()
-                                        .justify_center()
-                                        .flex_none()
-                                        .shadow_sm()
-                                        .child(
-                                            div().text_color(rgb(TEXT_MUTED)).child("📱"),
-                                        ),
-                                );
-
-                                item = item.child(
-                                    div()
-                                        .flex_1()
-                                        .flex()
-                                        .flex_col()
-                                        .gap(px(2.0))
-                                        .child(
-                                            div()
-                                                .text_sm()
-                                                .text_color(rgb(TEXT_PRIMARY))
-                                                .when(is_selected, |d: Div| d.text_color(rgb(PRIMARY)))
-                                                .child(product.name.to_string()),
-                                        )
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .items_center()
-                                                .gap_2()
-                                                .child(
-                                                    div()
-                                                        .text_xs()
-                                                        .px(px(6.0))
-                                                        .py(px(1.0))
-                                                        .rounded_sm()
-                                                        .bg(hsla(270. / 360., 0.3, 0.3, 0.2))
-                                                        .text_color(rgb(PRIMARY))
-                                                        .child(product.mcu.to_string()),
-                                                ),
-                                        ),
-                                );
-
-                                list = list.child(item);
-                            }
-
-                            list
-                        },
-                    ),
+                    .child(product_list_div),
             )
             // Right panel - firmware list
             .child(
@@ -205,7 +314,7 @@ impl SparkApp {
                     .flex()
                     .flex_col()
                     .overflow_y_scroll()
-                    // Product header with gradient bg
+                    // Product header
                     .child(
                         div()
                             .p_6()
@@ -222,20 +331,24 @@ impl SparkApp {
                                             .flex_col()
                                             .gap_2()
                                             .child(
-                                                div().text_2xl().text_color(rgb(TEXT_PRIMARY)).child("T-Display S3"),
+                                                div()
+                                                    .text_2xl()
+                                                    .text_color(rgb(TEXT_PRIMARY))
+                                                    .child(selected_name),
                                             )
                                             .child(
-                                                div().text_sm().text_color(rgb(TEXT_MUTED)).child("1.9\" LCD, USB-C, Wi-Fi/BLE"),
+                                                div()
+                                                    .text_sm()
+                                                    .text_color(rgb(TEXT_MUTED))
+                                                    .child(selected_desc),
                                             )
-                                            // Action buttons row
                                             .child(
                                                 div()
                                                     .flex()
                                                     .gap_2()
                                                     .mt_2()
                                                     .child(Self::header_action_btn("🐙", "GitHub"))
-                                                    .child(Self::header_action_btn("🌐", "Product Page"))
-                                                    .child(Self::header_action_btn("📊", "Electronics")),
+                                                    .child(Self::header_action_btn("🌐", "Product Page")),
                                             ),
                                     )
                                     .child(
@@ -248,9 +361,7 @@ impl SparkApp {
                                             .items_center()
                                             .justify_center()
                                             .shadow_md()
-                                            .child(
-                                                div().text_2xl().child("📱"),
-                                            ),
+                                            .child(div().text_2xl().child("📱")),
                                     ),
                             ),
                     )
@@ -266,7 +377,10 @@ impl SparkApp {
                                     .items_center()
                                     .gap_2()
                                     .child(
-                                        div().text_sm().text_color(rgb(TEXT_PRIMARY)).child("Available Firmware"),
+                                        div()
+                                            .text_sm()
+                                            .text_color(rgb(TEXT_PRIMARY))
+                                            .child("Available Firmware"),
                                     )
                                     .child(
                                         div()
@@ -276,72 +390,12 @@ impl SparkApp {
                                             .rounded_full()
                                             .bg(hsla(270. / 360., 0.3, 0.3, 0.2))
                                             .text_color(rgb(PRIMARY))
-                                            .child(format!("{}", FIRMWARES.len())),
+                                            .child(format!("{}", firmware_count)),
                                     ),
                             ),
                     )
                     // Firmware items
-                    .child(
-                        {
-                            let mut items = div().px_6().pb_6().flex().flex_col().gap_3();
-                            for fw in FIRMWARES {
-                                let (badge_color, badge_bg) = match fw.fw_type {
-                                    "factory" => (GREEN, hsla(150. / 360., 0.6, 0.4, 0.15)),
-                                    "micropython" => (AMBER, hsla(40. / 360., 0.7, 0.5, 0.15)),
-                                    "lvgl" => (PRIMARY, hsla(270. / 360., 0.5, 0.5, 0.15)),
-                                    _ => (TEXT_MUTED, hsla(0., 0., 0.3, 0.15)),
-                                };
-
-                                items = items.child(
-                                    glass_card_div()
-                                        .p_4()
-                                        .flex()
-                                        .items_center()
-                                        .justify_between()
-                                        .hover(|s| s.border_color(glass_border_hover()))
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .flex_col()
-                                                .gap_1()
-                                                .child(
-                                                    div()
-                                                        .flex()
-                                                        .items_center()
-                                                        .gap_2()
-                                                        .child(div().text_color(rgb(TEXT_PRIMARY)).child(fw.name.to_string()))
-                                                        .child(
-                                                            div()
-                                                                .text_xs()
-                                                                .px_2()
-                                                                .py(px(2.0))
-                                                                .rounded_md()
-                                                                .bg(badge_bg)
-                                                                .text_color(rgb(badge_color))
-                                                                .child(fw.fw_type.to_string()),
-                                                        ),
-                                                )
-                                                .child(
-                                                    div().text_xs().text_color(rgb(TEXT_MUTED)).child(format!("{} · {}", fw.version, fw.size)),
-                                                ),
-                                        )
-                                        .child(
-                                            div()
-                                                .px_4()
-                                                .py(px(6.0))
-                                                .rounded_lg()
-                                                .bg(hsla(220. / 360., 0.6, 0.5, 0.15))
-                                                .text_sm()
-                                                .text_color(rgb(0x3b82f6))
-                                                .cursor_pointer()
-                                                .hover(|s| s.bg(hsla(220. / 360., 0.6, 0.5, 0.25)))
-                                                .child("⬇ Download"),
-                                        ),
-                                );
-                            }
-                            items
-                        },
-                    ),
+                    .child(firmware_list),
             )
     }
 

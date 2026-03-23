@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app;
+mod manifest;
 mod pages;
 mod sidebar;
 mod theme;
@@ -9,6 +10,11 @@ use app::SparkApp;
 use gpui::*;
 
 fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .init();
+
+    log::info!("Starting LILYGO Spark NT v{}", env!("CARGO_PKG_VERSION"));
+
     Application::new().run(|cx: &mut App| {
         let bounds = Bounds::centered(None, size(px(1100.0), px(700.0)), cx);
 
@@ -27,7 +33,14 @@ fn main() {
                 }),
                 ..Default::default()
             },
-            |_window, cx| cx.new(|_| SparkApp::new()),
+            |_window, cx| {
+                let model = cx.new(|_| SparkApp::new());
+                // Load manifest on startup
+                model.update(cx, |app, cx| {
+                    app.load_manifest(cx);
+                });
+                model
+            },
         )
         .unwrap();
 
