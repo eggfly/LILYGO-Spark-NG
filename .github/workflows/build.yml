@@ -19,7 +19,58 @@ env:
   APP_IDENTIFIER: "cc.lilygo.spark-nt"
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      tag_name: ${{ steps.tag.outputs.tag_name }}
+      release_name: ${{ steps.tag.outputs.release_name }}
+      is_prerelease: ${{ steps.tag.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if release needed
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate tag name
+        if: steps.check.outputs.should_release == 'true'
+        id: tag
+        run: |
+          TIME_STR=$(date -u +'%Y%m%d.%H%M%S')
+          SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-7)
+
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_NAME=${{ github.ref_name }}
+            echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+            echo "release_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          else
+            TAG_NAME="v${{ env.APP_VERSION }}-canary.${TIME_STR}"
+            echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+            echo "release_name=Canary ${TAG_NAME} (${SHA_SHORT})" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        if: steps.check.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag_name }}
+          name: ${{ steps.tag.outputs.release_name }}
+          body: |
+            Automated build for commit `${{ github.sha }}`
+            Triggered by: `${{ github.event_name }}`
+          prerelease: ${{ steps.tag.outputs.is_prerelease }}
+          generate_release_notes: true
+
   build-macos:
+    needs: setup
     runs-on: macos-latest
     strategy:
       matrix:
@@ -132,7 +183,19 @@ jobs:
             ${{ env.APP_NAME }}-macos-${{ matrix.target }}.zip
           if-no-files-found: ignore
 
+      - name: Upload to Release
+        if: needs.setup.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          files: |
+            ${{ env.APP_NAME }}-macos-${{ matrix.target }}.dmg
+            ${{ env.APP_NAME }}-macos-${{ matrix.target }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-windows:
+    needs: setup
     runs-on: windows-latest
     strategy:
       matrix:
@@ -173,7 +236,17 @@ jobs:
           name: ${{ env.APP_NAME }}-windows-${{ matrix.target }}
           path: ${{ env.APP_NAME }}-windows-${{ matrix.target }}.zip
 
+      - name: Upload to Release
+        if: needs.setup.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          files: ${{ env.APP_NAME }}-windows-${{ matrix.target }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-linux:
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -230,53 +303,26 @@ jobs:
           name: ${{ env.APP_NAME }}-linux-${{ matrix.target }}
           path: ${{ env.APP_NAME }}-linux-${{ matrix.target }}.tar.gz
 
-  release:
-    needs: [build-macos, build-windows, build-linux]
+      - name: Upload to Release
+        if: needs.setup.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.setup.outputs.tag_name }}
+          files: ${{ env.APP_NAME }}-linux-${{ matrix.target }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    needs: [setup, build-macos, build-windows, build-linux]
+    if: needs.setup.outputs.should_release == 'true' && needs.setup.outputs.is_prerelease == 'true'
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: List artifacts
-        run: find artifacts -type f | head -30
-
-      - name: Gather release files
+      - name: Cleanup old canary releases
         run: |
-          mkdir -p release-files
-          find artifacts -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.tar.gz" \) -exec cp {} release-files/ \;
-          ls -lh release-files/
-
-      - name: Release (tagged)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release-files/*
-          generate_release_notes: true
-
-      - name: Release (latest)
-        if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: "Latest Build"
-          body: |
-            Automated build from `main` branch.
-
-            **Commit:** ${{ github.sha }}
-            **Time:** ${{ github.event.head_commit.timestamp }}
-
-            ---
-            | Platform | File |
-            |----------|------|
-            | macOS (Apple Silicon) | `*-aarch64-apple-darwin.dmg` |
-            | macOS (Intel) | `*-x86_64-apple-darwin.dmg` |
-            | Windows | `*-windows-*.zip` |
-            | Linux | `*-linux-*.tar.gz` |
-          files: release-files/*
-          prerelease: true
-          make_latest: false
+          TAGS=$(gh release list --repo ${{ github.repository }} --limit 100 --json tagName,isPrerelease -q '[.[] | select(.isPrerelease) | .tagName] | .[10:][]')
+          for TAG in $TAGS; do
+            echo "Deleting old canary: $TAG"
+            gh release delete "$TAG" --repo ${{ github.repository }} --yes --cleanup-tag 2>/dev/null || true
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
