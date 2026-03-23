@@ -52,6 +52,8 @@ impl SparkApp {
             let fw_name = fw.name.clone();
             let fw_version = fw.version.clone();
             let fw_filename = fw.filename.clone();
+            let fw_download_url = fw.oss_url.clone().unwrap_or_else(|| fw.download_url.clone());
+            let fw_id = format!("fw-dl-{}", fw_filename);
 
             firmware_list = firmware_list.child(
                 glass_card_div()
@@ -90,6 +92,7 @@ impl SparkApp {
                     )
                     .child(
                         div()
+                            .id(SharedString::from(fw_id))
                             .px_4()
                             .py(px(6.0))
                             .rounded_lg()
@@ -98,6 +101,11 @@ impl SparkApp {
                             .text_color(rgb(0x3b82f6))
                             .cursor_pointer()
                             .hover(|s| s.bg(hsla(220. / 360., 0.6, 0.5, 0.25)))
+                            .on_click(move |_, _, _| {
+                                if !fw_download_url.is_empty() {
+                                    let _ = open::that(&fw_download_url);
+                                }
+                            })
                             .child(format!("⬇ {}", self.i18n.t("fc.download"))),
                     ),
             );
@@ -301,27 +309,32 @@ impl SparkApp {
                                             .child(format!("🔍 {}", self.i18n.t("fc.search"))),
                                     ),
                             )
-                            .child(
+                            .child({
+                                let is_checked = self.only_with_firmware;
+                                let primary = self.primary();
                                 div()
+                                    .id("firmware-filter-toggle")
                                     .flex()
                                     .items_center()
                                     .gap_2()
-                                    .child(
-                                        div()
+                                    .cursor_pointer()
+                                    .child({
+                                        let mut cb = div()
                                             .w(px(14.0))
                                             .h(px(14.0))
                                             .rounded_sm()
-                                            .bg(rgb(self.primary()))
                                             .flex()
                                             .items_center()
-                                            .justify_center()
-                                            .child(
-                                                div()
-                                                    .text_xs()
-                                                    .text_color(rgb(0xffffff))
-                                                    .child("✓"),
-                                            ),
-                                    )
+                                            .justify_center();
+                                        if is_checked {
+                                            cb = cb.bg(rgb(primary)).child(
+                                                div().text_xs().text_color(rgb(0xffffff)).child("✓"),
+                                            );
+                                        } else {
+                                            cb = cb.border_1().border_color(glass_border());
+                                        }
+                                        cb
+                                    })
                                     .child(
                                         div()
                                             .text_xs()
@@ -333,8 +346,12 @@ impl SparkApp {
                                             .text_xs()
                                             .text_color(rgb(TEXT_MUTED))
                                             .child(format!("({} {})", product_count, self.i18n.t("fc.products"))),
-                                    ),
-                            ),
+                                    )
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.only_with_firmware = !this.only_with_firmware;
+                                        cx.notify();
+                                    }))
+                            }),
                     )
                     .child(product_list_div),
             )
