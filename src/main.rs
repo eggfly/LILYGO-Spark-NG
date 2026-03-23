@@ -2,19 +2,43 @@
 
 use gpui::*;
 
-// ─── Color palette ───
-const BG_PRIMARY: u32 = 0x1a1a2e;
-const BG_SECONDARY: u32 = 0x16213e;
-const BG_PANEL: u32 = 0x0f3460;
+// ─── Translucent color helpers (glass-like) ───
+fn glass_card() -> Hsla {
+    hsla(230. / 360., 0.25, 0.15, 0.55)
+}
+fn glass_sidebar() -> Hsla {
+    hsla(240. / 360., 0.35, 0.08, 0.70)
+}
+fn glass_border() -> Hsla {
+    hsla(230. / 360., 0.3, 0.4, 0.25)
+}
+fn glass_border_hover() -> Hsla {
+    hsla(195. / 360., 0.8, 0.5, 0.4)
+}
+
 const ACCENT: u32 = 0x00d4ff;
 const ACCENT_RED: u32 = 0xe94560;
 const TEXT_PRIMARY: u32 = 0xffffff;
-const TEXT_SECONDARY: u32 = 0xaaaaaa;
-const TEXT_MUTED: u32 = 0x666666;
-const BORDER: u32 = 0x2a2a4a;
-const SIDEBAR_BG: u32 = 0x12122a;
-const STATUS_BG: u32 = 0x0d0d1a;
-const CARD_BG: u32 = 0x1e1e3a;
+const TEXT_SECONDARY: u32 = 0xb0b0c0;
+const TEXT_MUTED: u32 = 0x666680;
+
+fn card_shadow() -> BoxShadow {
+    BoxShadow {
+        color: hsla(0., 0., 0., 0.4),
+        offset: point(px(0.), px(4.)),
+        blur_radius: px(16.),
+        spread_radius: px(0.),
+    }
+}
+
+fn btn_glow() -> BoxShadow {
+    BoxShadow {
+        color: hsla(350. / 360., 0.8, 0.45, 0.5),
+        offset: point(px(0.), px(0.)),
+        blur_radius: px(24.),
+        spread_radius: px(2.),
+    }
+}
 
 // ─── Navigation pages ───
 #[derive(Clone, Copy, PartialEq)]
@@ -45,7 +69,7 @@ impl Page {
     }
 }
 
-// ─── Device info for the device list ───
+// ─── Device info ───
 struct DeviceInfo {
     name: &'static str,
     mcu: &'static str,
@@ -111,30 +135,45 @@ impl SparkApp {
         cx.notify();
     }
 
+    // ─── Glass card wrapper ───
+    fn glass_card() -> Div {
+        div()
+            .rounded_xl()
+            .bg(glass_card())
+            .border_1()
+            .border_color(glass_border())
+            .shadow(vec![card_shadow()])
+    }
+
     // ─── Sidebar ───
     fn render_sidebar(&mut self, cx: &mut Context<Self>) -> Div {
         let current = self.current_page;
         let collapsed = self.sidebar_collapsed;
-        let width = if collapsed { px(56.0) } else { px(200.0) };
+        let width = if collapsed { px(60.0) } else { px(210.0) };
 
         let mut sidebar = div()
             .w(width)
             .h_full()
             .flex()
             .flex_col()
-            .bg(rgb(SIDEBAR_BG))
+            .bg(glass_sidebar())
             .border_r_1()
-            .border_color(rgb(BORDER));
+            .border_color(glass_border());
 
-        // Logo area
+        // Logo area with gradient accent
         sidebar = sidebar.child(
             div()
                 .flex()
                 .items_center()
                 .justify_center()
-                .h(px(56.0))
+                .h(px(60.0))
+                .bg(linear_gradient(
+                    180.,
+                    linear_color_stop(hsla(195. / 360., 0.8, 0.5, 0.15), 0.),
+                    linear_color_stop(hsla(270. / 360., 0.6, 0.4, 0.05), 1.),
+                ))
                 .border_b_1()
-                .border_color(rgb(BORDER))
+                .border_color(glass_border())
                 .child(
                     div()
                         .text_color(rgb(ACCENT))
@@ -145,34 +184,49 @@ impl SparkApp {
         // Nav items
         for page in [Page::Home, Page::Devices, Page::Firmware, Page::Settings] {
             let is_active = current == page;
-            let bg = if is_active { BG_PANEL } else { SIDEBAR_BG };
-            let text_color = if is_active { ACCENT } else { TEXT_SECONDARY };
             let label = if collapsed {
                 page.icon().to_string()
             } else {
                 format!("{}  {}", page.icon(), page.label())
             };
 
-            sidebar = sidebar.child(
-                div()
-                    .id(SharedString::from(format!("nav-{}", page.label())))
-                    .mx(px(8.0))
-                    .mt(px(4.0))
-                    .px(px(12.0))
-                    .py(px(10.0))
-                    .rounded_md()
-                    .bg(rgb(bg))
-                    .hover(|s| s.bg(rgb(BG_SECONDARY)))
-                    .cursor_pointer()
-                    .text_color(rgb(text_color))
-                    .child(label)
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        this.navigate(page, cx);
-                    })),
-            );
+            let mut item = div()
+                .id(SharedString::from(format!("nav-{}", page.label())))
+                .mx(px(8.0))
+                .mt(px(4.0))
+                .px(px(12.0))
+                .py(px(10.0))
+                .rounded_lg()
+                .cursor_pointer()
+                .hover(|s| s.bg(hsla(230. / 360., 0.3, 0.3, 0.3)))
+                .child(label)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.navigate(page, cx);
+                }));
+
+            if is_active {
+                item = item
+                    .bg(linear_gradient(
+                        90.,
+                        linear_color_stop(hsla(195. / 360., 0.8, 0.5, 0.2), 0.),
+                        linear_color_stop(hsla(270. / 360., 0.6, 0.5, 0.1), 1.),
+                    ))
+                    .text_color(rgb(ACCENT))
+                    .border_l_2()
+                    .border_color(rgb(ACCENT))
+                    .shadow(vec![BoxShadow {
+                        color: hsla(195. / 360., 1.0, 0.5, 0.15),
+                        offset: point(px(0.), px(0.)),
+                        blur_radius: px(12.),
+                        spread_radius: px(0.),
+                    }]);
+            } else {
+                item = item.text_color(rgb(TEXT_SECONDARY));
+            }
+
+            sidebar = sidebar.child(item);
         }
 
-        // Spacer
         sidebar = sidebar.child(div().flex_1());
 
         // Collapse toggle
@@ -183,10 +237,10 @@ impl SparkApp {
                 .justify_center()
                 .py_3()
                 .border_t_1()
-                .border_color(rgb(BORDER))
+                .border_color(glass_border())
                 .cursor_pointer()
                 .text_color(rgb(TEXT_MUTED))
-                .hover(|s| s.text_color(rgb(TEXT_SECONDARY)))
+                .hover(|s| s.text_color(rgb(ACCENT)))
                 .child(if collapsed { "▶" } else { "◀ Collapse" })
                 .on_click(cx.listener(Self::toggle_sidebar)),
         );
@@ -198,14 +252,14 @@ impl SparkApp {
     fn render_status_bar(&self) -> Div {
         div()
             .w_full()
-            .h(px(28.0))
+            .h(px(30.0))
             .flex()
             .items_center()
             .justify_between()
             .px_4()
-            .bg(rgb(STATUS_BG))
+            .bg(hsla(240. / 360., 0.3, 0.06, 0.8))
             .border_t_1()
-            .border_color(rgb(BORDER))
+            .border_color(glass_border())
             .child(
                 div()
                     .flex()
@@ -240,18 +294,23 @@ impl SparkApp {
             .p_6()
             .gap_6()
             .overflow_hidden()
-            // Welcome header
+            // Welcome header with gradient text simulation
             .child(
-                div().flex().flex_col().gap_2().child(
-                    div()
-                        .text_2xl()
-                        .text_color(rgb(TEXT_PRIMARY))
-                        .child("Welcome to LILYGO Spark NT"),
-                ).child(
-                    div()
-                        .text_color(rgb(TEXT_SECONDARY))
-                        .child("Flash firmware to your LILYGO devices with ease"),
-                ),
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .child(
+                        div()
+                            .text_2xl()
+                            .text_color(rgb(TEXT_PRIMARY))
+                            .child("Welcome to LILYGO Spark NT"),
+                    )
+                    .child(
+                        div()
+                            .text_color(rgb(TEXT_SECONDARY))
+                            .child("Flash firmware to your LILYGO devices with ease"),
+                    ),
             )
             // Stats cards row
             .child(
@@ -259,7 +318,12 @@ impl SparkApp {
                     .flex()
                     .gap_4()
                     .child(Self::stat_card("Devices", "4", "Total supported", ACCENT))
-                    .child(Self::stat_card("Connected", "1", "Ready to flash", 0x00e676))
+                    .child(Self::stat_card(
+                        "Connected",
+                        "1",
+                        "Ready to flash",
+                        0x00e676,
+                    ))
                     .child(Self::stat_card(
                         "Firmwares",
                         "12",
@@ -273,17 +337,13 @@ impl SparkApp {
                         ACCENT_RED,
                     )),
             )
-            // Quick action
+            // Quick action card
             .child(
-                div()
+                Self::glass_card()
                     .flex()
                     .flex_col()
                     .gap_3()
                     .p_5()
-                    .rounded_lg()
-                    .bg(rgb(CARD_BG))
-                    .border_1()
-                    .border_color(rgb(BORDER))
                     .child(
                         div()
                             .text_color(rgb(TEXT_PRIMARY))
@@ -293,7 +353,9 @@ impl SparkApp {
                         div()
                             .text_sm()
                             .text_color(rgb(TEXT_SECONDARY))
-                            .child("T-Display S3 is connected. Flash the latest firmware?"),
+                            .child(
+                                "T-Display S3 is connected. Flash the latest firmware?",
+                            ),
                     )
                     .child(
                         div()
@@ -305,9 +367,14 @@ impl SparkApp {
                             .flex()
                             .justify_center()
                             .rounded_lg()
-                            .bg(rgb(ACCENT_RED))
-                            .hover(|s| s.bg(rgb(0xc53050)))
-                            .active(|s| s.bg(rgb(0xa02040)))
+                            .bg(linear_gradient(
+                                135.,
+                                linear_color_stop(rgb(ACCENT_RED), 0.),
+                                linear_color_stop(rgb(0xc040a0), 1.),
+                            ))
+                            .shadow(vec![btn_glow()])
+                            .hover(|s| s.opacity(0.85))
+                            .active(|s| s.opacity(0.7))
                             .cursor_pointer()
                             .text_color(rgb(TEXT_PRIMARY))
                             .child("⚡ Flash Firmware")
@@ -317,16 +384,39 @@ impl SparkApp {
     }
 
     fn stat_card(title: &str, value: &str, subtitle: &str, accent: u32) -> Div {
-        div()
+        let accent_hsla = {
+            let r = ((accent >> 16) & 0xff) as f32 / 255.;
+            let g = ((accent >> 8) & 0xff) as f32 / 255.;
+            let b = (accent & 0xff) as f32 / 255.;
+            let max = r.max(g).max(b);
+            let min = r.min(g).min(b);
+            let l = (max + min) / 2.;
+            let s = if max == min {
+                0.
+            } else if l < 0.5 {
+                (max - min) / (max + min)
+            } else {
+                (max - min) / (2. - max - min)
+            };
+            let h = if max == min {
+                0.
+            } else if max == r {
+                ((g - b) / (max - min) + if g < b { 6. } else { 0. }) / 6.
+            } else if max == g {
+                ((b - r) / (max - min) + 2.) / 6.
+            } else {
+                ((r - g) / (max - min) + 4.) / 6.
+            };
+            hsla(h, s, l, 0.3)
+        };
+
+        Self::glass_card()
             .flex_1()
             .flex()
             .flex_col()
             .gap_1()
             .p_4()
-            .rounded_lg()
-            .bg(rgb(CARD_BG))
-            .border_1()
-            .border_color(rgb(BORDER))
+            .hover(|s| s.border_color(glass_border_hover()))
             .child(
                 div()
                     .text_xs()
@@ -337,6 +427,12 @@ impl SparkApp {
                 div()
                     .text_2xl()
                     .text_color(rgb(accent))
+                    .shadow(vec![BoxShadow {
+                        color: accent_hsla,
+                        offset: point(px(0.), px(0.)),
+                        blur_radius: px(0.),
+                        spread_radius: px(0.),
+                    }])
                     .child(value.to_string()),
             )
             .child(
@@ -369,40 +465,50 @@ impl SparkApp {
             );
 
         for device in DEVICES {
+            let is_connected = device.status == "Connected";
+            let mut card = Self::glass_card()
+                .flex()
+                .items_center()
+                .justify_between()
+                .p_4()
+                .hover(|s| s.border_color(glass_border_hover()));
+
+            if is_connected {
+                card = card.shadow(vec![
+                    card_shadow(),
+                    BoxShadow {
+                        color: hsla(140. / 360., 0.8, 0.45, 0.15),
+                        offset: point(px(0.), px(0.)),
+                        blur_radius: px(16.),
+                        spread_radius: px(0.),
+                    },
+                ]);
+            }
+
             page = page.child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .p_4()
-                    .rounded_lg()
-                    .bg(rgb(CARD_BG))
-                    .border_1()
-                    .border_color(rgb(BORDER))
-                    .hover(|s| s.border_color(rgb(ACCENT)))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap_1()
-                            .child(
-                                div()
-                                    .text_color(rgb(TEXT_PRIMARY))
-                                    .child(device.name.to_string()),
-                            )
-                            .child(
-                                div()
-                                    .text_sm()
-                                    .text_color(rgb(TEXT_MUTED))
-                                    .child(format!("MCU: {}", device.mcu)),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(rgb(device.status_color))
-                            .child(format!("● {}", device.status)),
-                    ),
+                card.child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_1()
+                        .child(
+                            div()
+                                .text_color(rgb(TEXT_PRIMARY))
+                                .child(device.name.to_string()),
+                        )
+                        .child(
+                            div()
+                                .text_sm()
+                                .text_color(rgb(TEXT_MUTED))
+                                .child(format!("MCU: {}", device.mcu)),
+                        ),
+                )
+                .child(
+                    div()
+                        .text_sm()
+                        .text_color(rgb(device.status_color))
+                        .child(format!("● {}", device.status)),
+                ),
             );
         }
 
@@ -438,22 +544,19 @@ impl SparkApp {
             );
 
         for (name, version, date, source) in firmwares {
-            let badge_color = match source {
-                "Official" => ACCENT,
-                "Community" => 0xffa726,
-                _ => TEXT_MUTED,
+            let (badge_color, badge_bg) = match source {
+                "Official" => (ACCENT, hsla(195. / 360., 0.8, 0.5, 0.15)),
+                "Community" => (0xffa726, hsla(35. / 360., 0.8, 0.5, 0.15)),
+                _ => (TEXT_MUTED, hsla(0., 0., 0.3, 0.15)),
             };
 
             page = page.child(
-                div()
+                Self::glass_card()
                     .flex()
                     .items_center()
                     .justify_between()
                     .p_4()
-                    .rounded_lg()
-                    .bg(rgb(CARD_BG))
-                    .border_1()
-                    .border_color(rgb(BORDER))
+                    .hover(|s| s.border_color(glass_border_hover()))
                     .child(
                         div()
                             .flex()
@@ -474,8 +577,8 @@ impl SparkApp {
                                             .text_xs()
                                             .px_2()
                                             .py(px(2.0))
-                                            .rounded_sm()
-                                            .bg(rgb(BG_SECONDARY))
+                                            .rounded_md()
+                                            .bg(badge_bg)
                                             .text_color(rgb(badge_color))
                                             .child(source.to_string()),
                                     ),
@@ -496,10 +599,26 @@ impl SparkApp {
     // ─── Settings page ───
     fn render_settings(&self) -> Div {
         let settings = [
-            ("Auto-connect", "Automatically connect to devices on startup", true),
-            ("Dark mode", "Use dark theme (currently the only theme)", true),
-            ("Check updates", "Check for firmware updates on launch", false),
-            ("Verbose logging", "Show detailed flash progress logs", false),
+            (
+                "Auto-connect",
+                "Automatically connect to devices on startup",
+                true,
+            ),
+            (
+                "Dark mode",
+                "Use dark theme (currently the only theme)",
+                true,
+            ),
+            (
+                "Check updates",
+                "Check for firmware updates on launch",
+                false,
+            ),
+            (
+                "Verbose logging",
+                "Show detailed flash progress logs",
+                false,
+            ),
         ];
 
         let mut page = div()
@@ -517,19 +636,19 @@ impl SparkApp {
             );
 
         for (name, desc, enabled) in settings {
-            let indicator_color = if enabled { ACCENT } else { TEXT_MUTED };
-            let indicator_text = if enabled { "ON" } else { "OFF" };
+            let (toggle_bg, toggle_color) = if enabled {
+                (hsla(195. / 360., 0.8, 0.5, 0.2), rgb(ACCENT))
+            } else {
+                (hsla(0., 0., 0.3, 0.2), rgb(TEXT_MUTED))
+            };
 
             page = page.child(
-                div()
+                Self::glass_card()
                     .flex()
                     .items_center()
                     .justify_between()
                     .p_4()
-                    .rounded_lg()
-                    .bg(rgb(CARD_BG))
-                    .border_1()
-                    .border_color(rgb(BORDER))
+                    .hover(|s| s.border_color(glass_border_hover()))
                     .child(
                         div()
                             .flex()
@@ -553,23 +672,20 @@ impl SparkApp {
                             .py_1()
                             .rounded_md()
                             .text_sm()
-                            .text_color(rgb(indicator_color))
+                            .text_color(toggle_color)
+                            .bg(toggle_bg)
                             .border_1()
-                            .border_color(rgb(indicator_color))
-                            .child(indicator_text.to_string()),
+                            .border_color(glass_border())
+                            .child(if enabled { "ON" } else { "OFF" }),
                     ),
             );
         }
 
         // About section
         page = page.child(
-            div()
+            Self::glass_card()
                 .mt_4()
                 .p_4()
-                .rounded_lg()
-                .bg(rgb(CARD_BG))
-                .border_1()
-                .border_color(rgb(BORDER))
                 .flex()
                 .flex_col()
                 .gap_2()
@@ -611,12 +727,16 @@ impl Render for SparkApp {
             Page::Settings => self.render_settings(),
         };
 
+        // Outer shell: gradient mesh background simulating Electron's glass-mesh
         div()
             .size_full()
             .flex()
             .flex_col()
-            .bg(rgb(BG_PRIMARY))
-            // Main area: sidebar + content
+            .bg(linear_gradient(
+                135.,
+                linear_color_stop(hsla(240. / 360., 0.4, 0.08, 1.0), 0.),
+                linear_color_stop(hsla(260. / 360., 0.3, 0.10, 1.0), 1.0),
+            ))
             .child(
                 div()
                     .flex_1()
@@ -626,7 +746,6 @@ impl Render for SparkApp {
                     .child(self.render_sidebar(cx))
                     .child(content),
             )
-            // Status bar
             .child(self.render_status_bar())
     }
 }
@@ -638,8 +757,10 @@ fn main() {
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
+                window_background: WindowBackgroundAppearance::Blurred,
                 titlebar: Some(TitlebarOptions {
                     title: Some("LILYGO Spark NT".into()),
+                    appears_transparent: true,
                     ..Default::default()
                 }),
                 window_min_size: Some(Size {
