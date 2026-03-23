@@ -11,6 +11,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
   APP_NAME: lilygo-spark-nt
+  APP_DISPLAY_NAME: "LILYGO Spark NT"
+  APP_BUNDLE_ID: cc.lilygo.spark-nt
+  APP_VERSION: "0.1.0"
 
 jobs:
   build-macos:
@@ -42,42 +45,104 @@ jobs:
       - name: Build (Release)
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package macOS app
+      - name: Package macOS .app bundle
         run: |
-          mkdir -p dist
-          APP_DIR="dist/LILYGO Spark NT.app/Contents/MacOS"
-          mkdir -p "$APP_DIR"
-          cp target/${{ matrix.target }}/release/${{ env.APP_NAME }} "$APP_DIR/"
+          APP_BUNDLE="${{ env.APP_DISPLAY_NAME }}.app"
+          mkdir -p "dist/${APP_BUNDLE}/Contents/MacOS"
+          mkdir -p "dist/${APP_BUNDLE}/Contents/Resources"
 
-          cat > "dist/LILYGO Spark NT.app/Contents/Info.plist" << 'PLIST'
+          cp "target/${{ matrix.target }}/release/${{ env.APP_NAME }}" "dist/${APP_BUNDLE}/Contents/MacOS/"
+
+          # Generate .icns from PNG (if iconutil is available on runner)
+          if [ -f resources/app-icon.png ]; then
+            mkdir -p AppIcon.iconset
+            sips -z 16 16     resources/app-icon.png --out AppIcon.iconset/icon_16x16.png
+            sips -z 32 32     resources/app-icon.png --out AppIcon.iconset/icon_16x16@2x.png
+            sips -z 32 32     resources/app-icon.png --out AppIcon.iconset/icon_32x32.png
+            sips -z 64 64     resources/app-icon.png --out AppIcon.iconset/icon_32x32@2x.png
+            sips -z 128 128   resources/app-icon.png --out AppIcon.iconset/icon_128x128.png
+            sips -z 256 256   resources/app-icon.png --out AppIcon.iconset/icon_128x128@2x.png
+            sips -z 256 256   resources/app-icon.png --out AppIcon.iconset/icon_256x256.png
+            sips -z 512 512   resources/app-icon.png --out AppIcon.iconset/icon_256x256@2x.png
+            sips -z 512 512   resources/app-icon.png --out AppIcon.iconset/icon_512x512.png
+            sips -z 1024 1024 resources/app-icon.png --out AppIcon.iconset/icon_512x512@2x.png
+            iconutil -c icns AppIcon.iconset -o "dist/${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+            rm -rf AppIcon.iconset
+          fi
+
+          # If pre-built .icns exists, use it
+          if [ -f resources/AppIcon.icns ]; then
+            cp resources/AppIcon.icns "dist/${APP_BUNDLE}/Contents/Resources/"
+          fi
+
+          cat > "dist/${APP_BUNDLE}/Contents/Info.plist" << PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>CFBundleName</key>
-            <string>LILYGO Spark NT</string>
+            <string>${{ env.APP_DISPLAY_NAME }}</string>
             <key>CFBundleIdentifier</key>
-            <string>cc.lilygo.spark-nt</string>
+            <string>${{ env.APP_BUNDLE_ID }}</string>
             <key>CFBundleVersion</key>
-            <string>0.1.0</string>
+            <string>${{ env.APP_VERSION }}</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${{ env.APP_VERSION }}</string>
             <key>CFBundleExecutable</key>
-            <string>lilygo-spark-nt</string>
+            <string>${{ env.APP_NAME }}</string>
             <key>CFBundlePackageType</key>
             <string>APPL</string>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
             <key>NSHighResolutionCapable</key>
             <true/>
+            <key>LSMinimumSystemVersion</key>
+            <string>10.15</string>
           </dict>
           </plist>
           PLIST
 
-          cd dist
-          zip -r "../LILYGO-Spark-NT-macos-${{ matrix.target }}.zip" "LILYGO Spark NT.app"
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "${{ env.APP_DISPLAY_NAME }}" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "${{ env.APP_DISPLAY_NAME }}.app" 175 190 \
+            --hide-extension "${{ env.APP_DISPLAY_NAME }}.app" \
+            --app-drop-link 425 190 \
+            --skip-jenkins \
+            --hdiutil-retries 15 \
+            "LILYGO-Spark-NT-${{ matrix.target }}.dmg" \
+            "dist/" \
+          || true
 
-      - name: Upload artifact
+          # Fallback: if create-dmg fails, make a simple zip
+          if [ ! -f "LILYGO-Spark-NT-${{ matrix.target }}.dmg" ]; then
+            echo "DMG creation failed, falling back to zip"
+            cd dist
+            zip -r "../LILYGO-Spark-NT-${{ matrix.target }}.zip" "${{ env.APP_DISPLAY_NAME }}.app"
+            cd ..
+          fi
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        if: hashFiles(format('LILYGO-Spark-NT-{0}.dmg', matrix.target)) != ''
+        with:
+          name: LILYGO-Spark-NT-macos-${{ matrix.target }}-dmg
+          path: "LILYGO-Spark-NT-${{ matrix.target }}.dmg"
+          if-no-files-found: ignore
+
+      - name: Upload ZIP fallback
         uses: actions/upload-artifact@v4
         with:
           name: LILYGO-Spark-NT-macos-${{ matrix.target }}
-          path: LILYGO-Spark-NT-macos-${{ matrix.target }}.zip
+          path: |
+            LILYGO-Spark-NT-${{ matrix.target }}.dmg
+            LILYGO-Spark-NT-${{ matrix.target }}.zip
+          if-no-files-found: ignore
 
   build-windows:
     runs-on: windows-latest
@@ -110,6 +175,9 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist
           Copy-Item "target/${{ matrix.target }}/release/${{ env.APP_NAME }}.exe" "dist/"
+          if (Test-Path "resources/app-icon.png") {
+            Copy-Item "resources/app-icon.png" "dist/"
+          }
           Compress-Archive -Path "dist/*" -DestinationPath "LILYGO-Spark-NT-windows-${{ matrix.target }}.zip"
 
       - name: Upload artifact
@@ -132,8 +200,13 @@ jobs:
         with:
           path: artifacts
 
+      - name: List artifacts
+        run: find artifacts -type f | head -20
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*.zip
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.zip
           generate_release_notes: true
