@@ -50,8 +50,8 @@ impl SparkApp {
                                 .flex_wrap()
                                 .gap_4();
 
-                            for link in LINKS {
-                                grid = grid.child(Self::community_link_card(link));
+                            for (i, link) in LINKS.iter().enumerate() {
+                                grid = grid.child(Self::community_link_card(i, link));
                             }
 
                             grid
@@ -60,8 +60,10 @@ impl SparkApp {
             )
     }
 
-    fn community_link_card(link: &CommunityLink) -> Div {
+    fn community_link_card(idx: usize, link: &CommunityLink) -> Stateful<Div> {
+        let url = format!("https://{}", link.url);
         glass_card_div()
+            .id(SharedString::from(format!("community-link-{}", idx)))
             .w(px(300.0))
             .flex()
             .items_center()
@@ -69,6 +71,9 @@ impl SparkApp {
             .p_4()
             .overflow_hidden()
             .cursor_pointer()
+            .on_click(move |_, _, _| {
+                let _ = open::that(&url);
+            })
             .hover(|s| s.border_color(glass_border_hover()).shadow_xl())
             // Accent left bar
             .child(

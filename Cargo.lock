@@ -3060,6 +3060,7 @@ dependencies = [
  "env_logger",
  "gpui",
  "log",
+ "open",
  "reqwest",
  "serde",
  "serde_json",

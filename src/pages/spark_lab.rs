@@ -7,32 +7,64 @@ struct SparkItem {
     icon: &'static str,
     name: &'static str,
     description: &'static str,
-    status: &'static str,
+    status: &'static str, // "done", "planned", "idea"
 }
 
 const FLASH_ITEMS: &[SparkItem] = &[
-    SparkItem { icon: "⚡", name: "Web Serial Flash", description: "Flash firmware via Web Serial API", status: "shipped" },
-    SparkItem { icon: "💾", name: "Firmware Dumper", description: "Read firmware from device", status: "shipped" },
-    SparkItem { icon: "🔬", name: "Firmware Analyzer", description: "Analyze binary firmware files", status: "shipped" },
-    SparkItem { icon: "📋", name: "Partition Editor", description: "Edit ESP32 partition tables", status: "shipped" },
-    SparkItem { icon: "📦", name: "OTA Updates", description: "Over-the-air firmware updates", status: "planned" },
+    SparkItem { icon: "📡", name: "WiFi OTA Wireless Flash", description: "Flash firmware wirelessly via WiFi OTA", status: "planned" },
+    SparkItem { icon: "🔄", name: "Multi-Device Batch Flash", description: "Flash multiple devices simultaneously", status: "idea" },
+    SparkItem { icon: "🔍", name: "Firmware Diff Compare", description: "Compare two firmware binaries side by side", status: "idea" },
+    SparkItem { icon: "💾", name: "Firmware Rollback & Backup", description: "Backup and restore firmware versions", status: "planned" },
+    SparkItem { icon: "📦", name: "Custom Firmware Repository", description: "Host and manage custom firmware repos", status: "idea" },
 ];
 
 const DEVICE_ITEMS: &[SparkItem] = &[
-    SparkItem { icon: "💻", name: "Serial Monitor", description: "Real-time serial communication", status: "shipped" },
-    SparkItem { icon: "📊", name: "Serial Plotter", description: "Visualize serial data", status: "planned" },
-    SparkItem { icon: "🔌", name: "Device Detection", description: "Auto-detect connected devices", status: "shipped" },
-    SparkItem { icon: "📡", name: "BLE Scanner", description: "Scan BLE devices nearby", status: "spark" },
-    SparkItem { icon: "🌐", name: "WiFi Provisioning", description: "Configure WiFi credentials", status: "spark" },
+    SparkItem { icon: "📊", name: "Serial Plotter", description: "Visualize serial data in real-time charts", status: "planned" },
+    SparkItem { icon: "🔌", name: "GPIO Live Monitor", description: "Monitor GPIO pin states in real-time", status: "idea" },
+    SparkItem { icon: "🔬", name: "I2C/SPI Device Scanner", description: "Scan and identify I2C/SPI devices on bus", status: "idea" },
+    SparkItem { icon: "📶", name: "Bluetooth Debug Assistant", description: "Debug BLE connections and services", status: "idea" },
+    SparkItem { icon: "🌐", name: "MQTT Test Client", description: "Test MQTT publish/subscribe messaging", status: "idea" },
 ];
+
+const CALCULATOR_ITEMS: &[SparkItem] = &[
+    SparkItem { icon: "⚡", name: "Ohm's Law Calculator", description: "Calculate voltage, current, resistance, power", status: "done" },
+    SparkItem { icon: "⏲", name: "555 Timer Calculator", description: "Calculate 555 timer astable/monostable", status: "done" },
+    SparkItem { icon: "🔋", name: "Battery Life Calculator", description: "Estimate battery runtime from capacity", status: "done" },
+    SparkItem { icon: "🖥", name: "ESP32 Power Mode Calculator", description: "Calculate power for different ESP32 modes", status: "done" },
+    SparkItem { icon: "🔀", name: "Series/Parallel R/C Calculator", description: "Calculate combined resistance/capacitance", status: "done" },
+    SparkItem { icon: "📐", name: "Interactive Circuit Schematic", description: "View and edit basic circuit schematics", status: "done" },
+    SparkItem { icon: "💡", name: "LED Current Limiting Resistor", description: "Calculate LED series resistor value", status: "done" },
+    SparkItem { icon: "📦", name: "SMD Resistor Calculator", description: "Decode SMD resistor marking codes", status: "done" },
+    SparkItem { icon: "🔴", name: "Resistor Color Code Calculator", description: "Read resistor color bands", status: "done" },
+    SparkItem { icon: "⏱", name: "RC Time Constant Calculator", description: "Calculate RC circuit time constants", status: "done" },
+    SparkItem { icon: "🔢", name: "Voltage Divider Calculator", description: "Calculate voltage divider output", status: "done" },
+    SparkItem { icon: "📡", name: "Power/dBm Converter", description: "Convert between watts and dBm", status: "planned" },
+    SparkItem { icon: "📻", name: "Antenna Impedance Matching", description: "Calculate antenna matching networks", status: "idea" },
+    SparkItem { icon: "🔲", name: "PCB Trace Width Calculator", description: "Calculate trace width for current capacity", status: "idea" },
+];
+
+const CREATIVE_ITEMS: &[SparkItem] = &[
+    SparkItem { icon: "🎲", name: "3D Board Preview", description: "Preview development boards in 3D", status: "idea" },
+    SparkItem { icon: "🤖", name: "AI Firmware Recommender", description: "AI-powered firmware suggestions", status: "idea" },
+    SparkItem { icon: "⭐", name: "Community Firmware Ratings", description: "Rate and review community firmware", status: "idea" },
+    SparkItem { icon: "✅", name: "Hardware Compatibility Check", description: "Check firmware-hardware compatibility", status: "planned" },
+    SparkItem { icon: "📄", name: "Project Template Generator", description: "Generate project scaffolding from templates", status: "idea" },
+];
+
+fn all_items() -> impl Iterator<Item = &'static SparkItem> {
+    FLASH_ITEMS.iter()
+        .chain(DEVICE_ITEMS.iter())
+        .chain(CALCULATOR_ITEMS.iter())
+        .chain(CREATIVE_ITEMS.iter())
+}
 
 impl SparkApp {
     pub fn render_spark_lab(&self) -> impl IntoElement {
-        let shipped = FLASH_ITEMS.iter().chain(DEVICE_ITEMS.iter()).filter(|i| i.status == "shipped").count();
-        let planned = FLASH_ITEMS.iter().chain(DEVICE_ITEMS.iter()).filter(|i| i.status == "planned").count();
-        let sparks = FLASH_ITEMS.iter().chain(DEVICE_ITEMS.iter()).filter(|i| i.status == "spark").count();
-        let total = shipped + planned + sparks;
-        let pct = if total > 0 { shipped * 100 / total } else { 0 };
+        let done = all_items().filter(|i| i.status == "done").count();
+        let planned = all_items().filter(|i| i.status == "planned").count();
+        let ideas = all_items().filter(|i| i.status == "idea").count();
+        let total = done + planned + ideas;
+        let pct = if total > 0 { done * 100 / total } else { 0 };
 
         div()
             .flex_1()
@@ -93,9 +125,9 @@ impl SparkApp {
                 div()
                     .flex()
                     .gap_3()
-                    .child(Self::status_pill("✅ Shipped", shipped, GREEN))
+                    .child(Self::status_pill("✅ Done", done, GREEN))
                     .child(Self::status_pill("🔜 Planned", planned, 0x3b82f6))
-                    .child(Self::status_pill("💡 Sparks", sparks, AMBER)),
+                    .child(Self::status_pill("💡 Sparks", ideas, AMBER)),
             )
             // Progress bar
             .child(
@@ -122,12 +154,14 @@ impl SparkApp {
                             ),
                     )
                     .child(
-                        div().text_xs().text_color(rgb(TEXT_MUTED)).child(format!("{}% complete ({}/{})", pct, shipped, total)),
+                        div().text_xs().text_color(rgb(TEXT_MUTED)).child(format!("{}% complete ({}/{})", pct, done, total)),
                     ),
             )
-            // Categories
+            // 4 Categories
             .child(Self::spark_category("🔧 Flash & Firmware Management", FLASH_ITEMS))
-            .child(Self::spark_category("🔌 Device Interaction", DEVICE_ITEMS)),
+            .child(Self::spark_category("🔌 Device Interaction", DEVICE_ITEMS))
+            .child(Self::spark_category("📐 Embedded Calculators", CALCULATOR_ITEMS))
+            .child(Self::spark_category("🎨 Creative & Differentiation", CREATIVE_ITEMS)),
             )
     }
 
@@ -158,7 +192,7 @@ impl SparkApp {
 
         for item in items {
             let (status_text, status_color) = match item.status {
-                "shipped" => ("✅ Shipped", GREEN),
+                "done" => ("✅ Done", GREEN),
                 "planned" => ("🔜 Planned", 0x3b82f6),
                 _ => ("💡 Spark", AMBER),
             };

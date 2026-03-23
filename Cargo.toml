@@ -15,6 +15,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 log = "0.4"
 env_logger = "0.11"
 sys-locale = "0.3"
+open = "5"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Wdk_System_SystemServices", "Win32_Foundation"] }
