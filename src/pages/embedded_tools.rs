@@ -69,12 +69,17 @@ impl SparkApp {
 
         let tool_content: AnyElement = match active_idx {
             0 => self.render_resistor_calc(),
+            1 => self.render_image_converter(),
             2 => self.render_voltage_divider(),
             3 => self.render_rc_time_constant(),
             4 => self.render_ohms_law_calc(),
             5 => self.render_555_timer(),
+            6 => self.render_smd_resistor(),
             7 => self.render_led_resistor(),
             8 => self.render_battery_life(),
+            9 => self.render_esp32_power(),
+            10 => self.render_series_parallel(),
+            11 => self.render_circuit_templates(),
             _ => self.render_tool_placeholder(active_idx),
         };
 
@@ -294,6 +299,169 @@ impl SparkApp {
                     .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("≈ 1.04 days")),
             )
             .into_any_element()
+    }
+
+    fn render_image_converter(&self) -> AnyElement {
+        glass_card_div()
+            .p_6()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(div().text_color(rgb(TEXT_PRIMARY)).child("🖼 Image Converter"))
+            .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("Convert images to C arrays for embedded displays (LCD/OLED)"))
+            .child(
+                glass_card_div()
+                    .p_8()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .justify_center()
+                    .gap_3()
+                    .min_h(px(120.0))
+                    .border_2()
+                    .border_color(glass_border())
+                    .child(div().text_2xl().child("🖼"))
+                    .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("Drop an image here or click to select"))
+                    .child(div().text_xs().text_color(rgb(TEXT_MUTED)).child("Supports: PNG, JPG, BMP")),
+            )
+            .child(
+                div().flex().flex_wrap().gap_4()
+                    .child(Self::calc_field("Output Format", "RGB565", "", self.primary()))
+                    .child(Self::calc_field("Width", "128", "px", AMBER))
+                    .child(Self::calc_field("Height", "64", "px", AMBER)),
+            )
+            .into_any_element()
+    }
+
+    fn render_smd_resistor(&self) -> AnyElement {
+        let primary = self.primary();
+        glass_card_div()
+            .p_6()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(div().text_color(rgb(TEXT_PRIMARY)).child("📦 SMD Resistor Code Calculator"))
+            .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("Decode SMD resistor marking codes (3-digit, 4-digit, EIA-96)"))
+            .child(
+                div().flex().flex_wrap().gap_4()
+                    .child(Self::calc_field("SMD Code", "472", "", primary)),
+            )
+            .child(
+                div().mt_2().p_4().rounded_lg().bg(hsla(0., 0., 0., 0.2))
+                    .flex().flex_col().items_center().gap_2()
+                    .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("47 × 10² = 4700"))
+                    .child(div().text_xl().text_color(rgb(GREEN)).child("4.7 kΩ")),
+            )
+            .into_any_element()
+    }
+
+    fn render_esp32_power(&self) -> AnyElement {
+        let primary = self.primary();
+        glass_card_div()
+            .p_6()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(div().text_color(rgb(TEXT_PRIMARY)).child("🖥 ESP32 Power Mode Calculator"))
+            .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("Estimate power consumption for different ESP32 operating modes"))
+            .child(
+                div().flex().flex_col().gap_2()
+                    .child(Self::power_mode_row("Active (WiFi TX)", "160-260", "mA", RED))
+                    .child(Self::power_mode_row("Active (WiFi RX)", "95-100", "mA", AMBER))
+                    .child(Self::power_mode_row("Active (BLE)", "95-100", "mA", AMBER))
+                    .child(Self::power_mode_row("Modem Sleep", "20-30", "mA", primary))
+                    .child(Self::power_mode_row("Light Sleep", "0.8", "mA", GREEN))
+                    .child(Self::power_mode_row("Deep Sleep", "10", "μA", GREEN))
+                    .child(Self::power_mode_row("Hibernation", "5", "μA", GREEN)),
+            )
+            .child(
+                div().mt_2().p_4().rounded_lg().bg(hsla(0., 0., 0., 0.2))
+                    .flex().flex_col().items_center().gap_2()
+                    .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("With 2000 mAh battery in Deep Sleep:"))
+                    .child(div().text_xl().text_color(rgb(GREEN)).child("≈ 200,000 hours (22.8 years)")),
+            )
+            .into_any_element()
+    }
+
+    fn render_series_parallel(&self) -> AnyElement {
+        let primary = self.primary();
+        glass_card_div()
+            .p_6()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(div().text_color(rgb(TEXT_PRIMARY)).child("🔀 Series/Parallel Calculator"))
+            .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("Calculate combined resistance or capacitance"))
+            .child(
+                div().flex().flex_wrap().gap_4()
+                    .child(Self::calc_field("R1", "100", "Ω", primary))
+                    .child(Self::calc_field("R2", "200", "Ω", AMBER))
+                    .child(Self::calc_field("R3", "300", "Ω", GREEN)),
+            )
+            .child(
+                div().mt_2().p_4().rounded_lg().bg(hsla(0., 0., 0., 0.2))
+                    .flex().flex_col().gap_3()
+                    .child(
+                        div().flex().items_center().justify_between()
+                            .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("Series: R1 + R2 + R3"))
+                            .child(div().text_color(rgb(primary)).child("600 Ω")),
+                    )
+                    .child(
+                        div().flex().items_center().justify_between()
+                            .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("Parallel: 1/(1/R1 + 1/R2 + 1/R3)"))
+                            .child(div().text_color(rgb(GREEN)).child("54.5 Ω")),
+                    ),
+            )
+            .into_any_element()
+    }
+
+    fn render_circuit_templates(&self) -> AnyElement {
+        glass_card_div()
+            .p_6()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(div().text_color(rgb(TEXT_PRIMARY)).child("📐 Circuit Schematic Templates"))
+            .child(div().text_sm().text_color(rgb(TEXT_MUTED)).child("Common circuit reference schematics for embedded projects"))
+            .child(
+                div().flex().flex_wrap().gap_3()
+                    .child(Self::template_card("Voltage Regulator", "LDO 3.3V circuit"))
+                    .child(Self::template_card("I2C Pull-up", "Standard I2C bus pull-ups"))
+                    .child(Self::template_card("SPI Interface", "Standard SPI connection"))
+                    .child(Self::template_card("UART Level Shift", "3.3V ↔ 5V level converter"))
+                    .child(Self::template_card("Motor Driver", "H-bridge motor control"))
+                    .child(Self::template_card("Power Filter", "Decoupling capacitor layout")),
+            )
+            .into_any_element()
+    }
+
+    fn power_mode_row(mode: &str, current: &str, unit: &str, color: u32) -> Div {
+        div()
+            .flex()
+            .items_center()
+            .justify_between()
+            .py(px(6.0))
+            .px_3()
+            .rounded_md()
+            .hover(|s| s.bg(hsla(0., 0., 0., 0.1)))
+            .child(div().text_sm().text_color(rgb(TEXT_PRIMARY)).child(mode.to_string()))
+            .child(
+                div().text_sm().text_color(rgb(color))
+                    .child(format!("{} {}", current, unit)),
+            )
+    }
+
+    fn template_card(name: &str, desc: &str) -> Div {
+        glass_card_div()
+            .w(px(200.0))
+            .p_4()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .cursor_pointer()
+            .hover(|s| s.border_color(glass_border_hover()))
+            .child(div().text_sm().text_color(rgb(TEXT_PRIMARY)).child(name.to_string()))
+            .child(div().text_xs().text_color(rgb(TEXT_MUTED)).child(desc.to_string()))
     }
 
     fn calc_field(label: &str, value: &str, unit: &str, color: u32) -> Div {
