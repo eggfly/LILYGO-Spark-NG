@@ -8,6 +8,10 @@ use crate::theme::*;
 impl SparkApp {
     pub fn render_sidebar(&mut self, cx: &mut Context<Self>) -> Div {
         let current = self.current_page;
+        let primary = self.primary();
+        let primary_tint = self.primary_alpha(0.10);
+        let primary_glow = self.primary_alpha(0.15);
+        let primary_shadow = self.primary_alpha(0.30);
 
         let mut sidebar = div()
             .w(px(220.0))
@@ -46,11 +50,11 @@ impl SparkApp {
                                 .rounded_xl()
                                 .bg(linear_gradient(
                                     135.,
-                                    linear_color_stop(rgb(PRIMARY), 0.),
+                                    linear_color_stop(rgb(primary), 0.),
                                     linear_color_stop(rgb(0x7c3aed), 1.),
                                 ))
                                 .shadow(vec![BoxShadow {
-                                    color: hsla(270. / 360., 0.7, 0.5, 0.3),
+                                    color: primary_shadow,
                                     offset: point(px(0.), px(2.)),
                                     blur_radius: px(8.),
                                     spread_radius: px(0.),
@@ -106,10 +110,10 @@ impl SparkApp {
 
                     if is_active {
                         item = item
-                            .bg(hsla(270. / 360., 0.5, 0.5, 0.10))
-                            .text_color(rgb(PRIMARY))
+                            .bg(primary_tint)
+                            .text_color(rgb(primary))
                             .shadow(vec![BoxShadow {
-                                color: hsla(270. / 360., 0.7, 0.5, 0.15),
+                                color: primary_glow,
                                 offset: point(px(0.), px(0.)),
                                 blur_radius: px(15.),
                                 spread_radius: px(-3.),
@@ -123,7 +127,7 @@ impl SparkApp {
                         div()
                             .w(px(3.0))
                             .rounded_full()
-                            .bg(rgb(PRIMARY))
+                            .bg(rgb(primary))
                             .when(!is_active, |d: Div| d.h(px(0.)).opacity(0.))
                             .when(is_active, |d: Div| d.h(px(32.0)).opacity(1.))
                             .mr(px(-6.0)),
@@ -200,7 +204,7 @@ impl SparkApp {
                             div()
                                 .text_xs()
                                 .text_color(rgb(TEXT_MUTED))
-                                .child("v0.1.0"),
+                                .child(format!("v{}", env!("CARGO_PKG_VERSION"))),
                         ),
                 ),
         );

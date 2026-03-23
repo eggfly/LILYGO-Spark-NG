@@ -98,6 +98,45 @@ pub enum SettingsTab {
     Feedback,
 }
 
+impl SparkApp {
+    /// Returns the currently active accent/primary color hex value.
+    /// This respects the user's accent_color setting instead of the hardcoded PRIMARY constant.
+    pub fn primary(&self) -> u32 {
+        self.accent_color.hex()
+    }
+
+    /// Returns the primary color as an Hsla with custom alpha, useful for bg tints.
+    pub fn primary_alpha(&self, alpha: f32) -> Hsla {
+        let c = self.accent_color.hex();
+        let [_, r, g, b] = c.to_be_bytes();
+        // Simple RGB to HSL-ish: just use rgba for tinting
+        let r = r as f32 / 255.0;
+        let g = g as f32 / 255.0;
+        let b = b as f32 / 255.0;
+        let max = r.max(g).max(b);
+        let min = r.min(g).min(b);
+        let l = (max + min) / 2.0;
+        let s = if max == min {
+            0.0
+        } else if l < 0.5 {
+            (max - min) / (max + min)
+        } else {
+            (max - min) / (2.0 - max - min)
+        };
+        let h = if max == min {
+            0.0
+        } else if max == r {
+            ((g - b) / (max - min)) / 6.0
+        } else if max == g {
+            (2.0 + (b - r) / (max - min)) / 6.0
+        } else {
+            (4.0 + (r - g) / (max - min)) / 6.0
+        };
+        let h = if h < 0.0 { h + 1.0 } else { h };
+        hsla(h, s, l, alpha)
+    }
+}
+
 pub struct SparkApp {
     pub current_page: Page,
     pub manifest: Manifest,
@@ -121,6 +160,10 @@ pub struct SparkApp {
     pub advanced_expanded: bool,
     pub developer_mode: bool,
     pub canary_update: bool,
+    // Firmware Lab state
+    pub active_lab_tab: usize, // 0=Burner, 1=Dumper, 2=Analyzer, 3=Partition
+    // Embedded Tools state
+    pub active_tool_idx: usize, // 0-11 tool index
 }
 
 impl SparkApp {
@@ -147,6 +190,8 @@ impl SparkApp {
             advanced_expanded: false,
             developer_mode: false,
             canary_update: false,
+            active_lab_tab: 0,
+            active_tool_idx: 0,
         }
     }
 
@@ -237,9 +282,9 @@ impl Render for SparkApp {
         let content: AnyElement = match self.current_page {
             Page::Discovery => self.render_discovery().into_any_element(),
             Page::FirmwareCenter => self.render_firmware_center(cx).into_any_element(),
-            Page::FirmwareLab => self.render_firmware_lab().into_any_element(),
+            Page::FirmwareLab => self.render_firmware_lab(cx).into_any_element(),
             Page::SerialTools => self.render_serial_tools().into_any_element(),
-            Page::EmbeddedTools => self.render_embedded_tools().into_any_element(),
+            Page::EmbeddedTools => self.render_embedded_tools(cx).into_any_element(),
             Page::Community => self.render_community().into_any_element(),
             Page::SparkLab => self.render_spark_lab().into_any_element(),
             Page::Settings => self.render_settings(cx).into_any_element(),
