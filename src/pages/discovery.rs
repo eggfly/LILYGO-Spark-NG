@@ -5,6 +5,8 @@ use crate::theme::*;
 
 impl SparkApp {
     pub fn render_discovery(&self) -> impl IntoElement {
+        let title = self.i18n.t("discovery.title").to_string();
+        let subtitle = self.i18n.t("discovery.subtitle").to_string();
         div()
             .id("discovery-page")
             .flex_1()
@@ -54,14 +56,14 @@ impl SparkApp {
                                             ),
                                     )
                                     .child(
-                                        div().text_2xl().text_color(rgb(TEXT_PRIMARY)).child("Spark Discovery"),
+                                        div().text_2xl().text_color(rgb(TEXT_PRIMARY)).child(title),
                                     ),
                             )
                             .child(
                                 div()
                                     .text_sm()
                                     .text_color(rgb(TEXT_MUTED))
-                                    .child("Latest news and inspiration from the open-source embedded community."),
+                                    .child(subtitle),
                             ),
                     )
                     // Refresh button

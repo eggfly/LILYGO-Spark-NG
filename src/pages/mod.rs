@@ -46,6 +46,19 @@ impl Page {
         }
     }
 
+    pub fn i18n_key(&self) -> &'static str {
+        match self {
+            Page::Discovery => "nav.discovery",
+            Page::FirmwareCenter => "nav.firmware",
+            Page::FirmwareLab => "nav.firmware_lab",
+            Page::SerialTools => "nav.serial_tools",
+            Page::EmbeddedTools => "nav.embedded_tools",
+            Page::Community => "nav.community",
+            Page::SparkLab => "nav.spark_lab",
+            Page::Settings => "nav.settings",
+        }
+    }
+
     pub fn icon(&self) -> &'static str {
         match self {
             Page::Discovery => "🧭",

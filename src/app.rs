@@ -1,8 +1,102 @@
 use gpui::*;
 
+use crate::i18n::{I18n, Language};
 use crate::manifest::{self, FlatProduct, FirmwareItem, Manifest};
 use crate::pages::Page;
 use crate::theme::*;
+
+// Settings enums
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum ThemePreference {
+    System,
+    Light,
+    Dark,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum AccentMode {
+    Rotating,
+    Fixed,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum AccentColor {
+    Blue,
+    Orange,
+    Amber,
+    Emerald,
+    Cyan,
+    Sky,
+    Violet,
+    Rose,
+}
+
+impl AccentColor {
+    pub const ALL: [AccentColor; 8] = [
+        AccentColor::Blue, AccentColor::Orange, AccentColor::Amber, AccentColor::Emerald,
+        AccentColor::Cyan, AccentColor::Sky, AccentColor::Violet, AccentColor::Rose,
+    ];
+    pub fn hex(&self) -> u32 {
+        match self {
+            AccentColor::Blue => 0x3b82f6,
+            AccentColor::Orange => 0xf97316,
+            AccentColor::Amber => 0xf59e0b,
+            AccentColor::Emerald => 0x10b981,
+            AccentColor::Cyan => 0x06b6d4,
+            AccentColor::Sky => 0x0ea5e9,
+            AccentColor::Violet => 0x8b5cf6,
+            AccentColor::Rose => 0xf43f5e,
+        }
+    }
+    pub fn id(&self) -> &'static str {
+        match self {
+            AccentColor::Blue => "blue", AccentColor::Orange => "orange",
+            AccentColor::Amber => "amber", AccentColor::Emerald => "emerald",
+            AccentColor::Cyan => "cyan", AccentColor::Sky => "sky",
+            AccentColor::Violet => "violet", AccentColor::Rose => "rose",
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum LinkOpenMode {
+    Internal,
+    External,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum FlashCelebrationStyle {
+    Fireworks,
+    Hacker,
+    Minimal,
+    Neon,
+    Terminal,
+    Gradient,
+}
+
+impl FlashCelebrationStyle {
+    pub const ALL: [FlashCelebrationStyle; 6] = [
+        FlashCelebrationStyle::Fireworks, FlashCelebrationStyle::Hacker,
+        FlashCelebrationStyle::Minimal, FlashCelebrationStyle::Neon,
+        FlashCelebrationStyle::Terminal, FlashCelebrationStyle::Gradient,
+    ];
+    pub fn label(&self) -> &'static str {
+        match self {
+            FlashCelebrationStyle::Fireworks => "Fireworks",
+            FlashCelebrationStyle::Hacker => "Hacker",
+            FlashCelebrationStyle::Minimal => "Minimal",
+            FlashCelebrationStyle::Neon => "Neon",
+            FlashCelebrationStyle::Terminal => "Terminal",
+            FlashCelebrationStyle::Gradient => "Gradient",
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum SettingsTab {
+    Settings,
+    Feedback,
+}
 
 pub struct SparkApp {
     pub current_page: Page,
@@ -14,6 +108,19 @@ pub struct SparkApp {
     pub only_with_firmware: bool,
     pub manifest_loading: bool,
     pub manifest_error: Option<String>,
+    pub i18n: I18n,
+    // Settings state
+    pub settings_tab: SettingsTab,
+    pub theme_preference: ThemePreference,
+    pub accent_mode: AccentMode,
+    pub accent_color: AccentColor,
+    pub link_open_mode: LinkOpenMode,
+    pub glass_enabled: bool,
+    pub sound_enabled: bool,
+    pub flash_celebration_style: FlashCelebrationStyle,
+    pub advanced_expanded: bool,
+    pub developer_mode: bool,
+    pub canary_update: bool,
 }
 
 impl SparkApp {
@@ -28,6 +135,18 @@ impl SparkApp {
             only_with_firmware: true,
             manifest_loading: true,
             manifest_error: None,
+            i18n: I18n::new(Language::from_system()),
+            settings_tab: SettingsTab::Settings,
+            theme_preference: ThemePreference::System,
+            accent_mode: AccentMode::Rotating,
+            accent_color: AccentColor::Violet,
+            link_open_mode: LinkOpenMode::Internal,
+            glass_enabled: true,
+            sound_enabled: true,
+            flash_celebration_style: FlashCelebrationStyle::Fireworks,
+            advanced_expanded: false,
+            developer_mode: false,
+            canary_update: false,
         }
     }
 
@@ -88,6 +207,11 @@ impl SparkApp {
         }
     }
 
+    pub fn set_language(&mut self, language: Language, cx: &mut Context<Self>) {
+        self.i18n.set_language(language);
+        cx.notify();
+    }
+
     pub fn filtered_products(&self) -> Vec<(usize, &FlatProduct)> {
         let q = self.search_query.to_lowercase();
         self.flat_products.iter().enumerate().filter(|(_, p)| {
@@ -118,7 +242,7 @@ impl Render for SparkApp {
             Page::EmbeddedTools => self.render_embedded_tools().into_any_element(),
             Page::Community => self.render_community().into_any_element(),
             Page::SparkLab => self.render_spark_lab().into_any_element(),
-            Page::Settings => self.render_settings().into_any_element(),
+            Page::Settings => self.render_settings(cx).into_any_element(),
         };
 
         div()

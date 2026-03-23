@@ -61,7 +61,7 @@ impl SparkApp {
                             .text_color(rgb(PRIMARY))
                             .text_sm()
                             .cursor_pointer()
-                            .child("✨ Sparkling List"),
+                            .child(format!("✨ {}", self.i18n.t("sparklab.sparkling_list"))),
                     )
                     .child(
                         div()
@@ -75,7 +75,7 @@ impl SparkApp {
                             .text_sm()
                             .cursor_pointer()
                             .hover(|s| s.bg(hsla(0., 0., 0.5, 0.05)))
-                            .child("📖 Guide"),
+                            .child(format!("📖 {}", self.i18n.t("sparklab.guide"))),
                     ),
             )
             // Content
@@ -87,7 +87,7 @@ impl SparkApp {
             .gap_6()
             .id("spark-lab-page")
             .overflow_y_scroll()
-            .child(page_header("🧪", "Spark Lab", "Track features and explore what's coming next"))
+            .child(page_header("🧪", self.i18n.t("sparklab.title"), self.i18n.t("sparklab.subtitle")))
             // Stats row
             .child(
                 div()

@@ -5,6 +5,14 @@ use crate::theme::*;
 
 impl SparkApp {
     pub fn render_firmware_lab(&self) -> impl IntoElement {
+        let t_burner = self.i18n.t("lab.burner").to_string();
+        let t_dumper = self.i18n.t("lab.dumper").to_string();
+        let t_analyzer = self.i18n.t("lab.analyzer").to_string();
+        let t_partition = self.i18n.t("lab.partition_editor").to_string();
+        let t_start_flash = self.i18n.t("lab.start_flash").to_string();
+        let t_ready = self.i18n.t("lab.ready").to_string();
+        let t_drop_file = self.i18n.t("lab.drop_file").to_string();
+
         div()
             .flex_1()
             .flex()
@@ -20,10 +28,10 @@ impl SparkApp {
                     .py_2()
                     .border_b_1()
                     .border_color(glass_border())
-                    .child(Self::lab_tab("⚡", "Burner", true))
-                    .child(Self::lab_tab("⬇", "Dumper", false))
-                    .child(Self::lab_tab("🔬", "Analyzer", false))
-                    .child(Self::lab_tab("📋", "Partition Editor", false)),
+                    .child(Self::lab_tab("⚡", &t_burner, true))
+                    .child(Self::lab_tab("⬇", &t_dumper, false))
+                    .child(Self::lab_tab("🔬", &t_analyzer, false))
+                    .child(Self::lab_tab("📋", &t_partition, false)),
             )
             // Content area - Burner view (default)
             .child(
@@ -113,7 +121,7 @@ impl SparkApp {
                                 div().text_2xl().child("📂"),
                             )
                             .child(
-                                div().text_sm().text_color(rgb(TEXT_MUTED)).child("Drop .bin file here or click to select"),
+                                div().text_sm().text_color(rgb(TEXT_MUTED)).child(t_drop_file),
                             )
                             .child(
                                 div().text_xs().text_color(rgb(TEXT_MUTED)).child("Supports: .bin firmware files"),
@@ -130,7 +138,7 @@ impl SparkApp {
                                     .flex_1()
                                     .text_sm()
                                     .text_color(rgb(TEXT_MUTED))
-                                    .child("Ready to flash"),
+                                    .child(t_ready),
                             )
                             .child(
                                 div()
@@ -141,7 +149,7 @@ impl SparkApp {
                                     .text_color(rgb(0xffffff))
                                     .cursor_pointer()
                                     .hover(|s| s.opacity(0.85))
-                                    .child("⚡ Start Flashing"),
+                                    .child(format!("⚡ {}", t_start_flash)),
                             ),
                     )
                     // Terminal placeholder

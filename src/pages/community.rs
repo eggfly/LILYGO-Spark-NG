@@ -34,7 +34,7 @@ impl SparkApp {
                     .p_6()
                     .border_b_1()
                     .border_color(glass_border())
-                    .child(page_header("👥", "LILYGO Related", "Official resources and community links"))
+                    .child(page_header("👥", self.i18n.t("community.title"), self.i18n.t("community.subtitle")))
             )
             // Link grid
             .child(

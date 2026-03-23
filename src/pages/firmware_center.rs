@@ -23,7 +23,7 @@ impl SparkApp {
         let selected_name = selected_idx
             .and_then(|i| self.flat_products.get(i))
             .map(|p| p.name.clone())
-            .unwrap_or_else(|| "Select a product".to_string());
+            .unwrap_or_else(|| self.i18n.t("fc.select_device").to_string());
         let selected_desc = selected_idx
             .and_then(|i| self.flat_products.get(i))
             .map(|p| p.description.clone())
@@ -94,7 +94,7 @@ impl SparkApp {
                             .text_color(rgb(0x3b82f6))
                             .cursor_pointer()
                             .hover(|s| s.bg(hsla(220. / 360., 0.6, 0.5, 0.25)))
-                            .child("⬇ Download"),
+                            .child(format!("⬇ {}", self.i18n.t("fc.download"))),
                     ),
             );
         }
@@ -266,7 +266,7 @@ impl SparkApp {
                                         div()
                                             .text_sm()
                                             .text_color(rgb(TEXT_MUTED))
-                                            .child("🔍 Search products..."),
+                                            .child(format!("🔍 {}", self.i18n.t("fc.search"))),
                                     ),
                             )
                             .child(
@@ -294,13 +294,13 @@ impl SparkApp {
                                         div()
                                             .text_xs()
                                             .text_color(rgb(TEXT_SECONDARY))
-                                            .child("Only show with firmware"),
+                                            .child(self.i18n.t("fc.only_with_firmware").to_string()),
                                     )
                                     .child(
                                         div()
                                             .text_xs()
                                             .text_color(rgb(TEXT_MUTED))
-                                            .child(format!("({} products)", product_count)),
+                                            .child(format!("({} {})", product_count, self.i18n.t("fc.products"))),
                                     ),
                             ),
                     )
@@ -380,7 +380,7 @@ impl SparkApp {
                                         div()
                                             .text_sm()
                                             .text_color(rgb(TEXT_PRIMARY))
-                                            .child("Available Firmware"),
+                                            .child(self.i18n.t("fc.available_firmware").to_string()),
                                     )
                                     .child(
                                         div()

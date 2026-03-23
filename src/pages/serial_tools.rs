@@ -5,6 +5,11 @@ use crate::theme::*;
 
 impl SparkApp {
     pub fn render_serial_tools(&self) -> impl IntoElement {
+        let t_select_port = self.i18n.t("serial.select_port").to_string();
+        let t_connect = self.i18n.t("serial.connect").to_string();
+        let t_clear = self.i18n.t("serial.clear").to_string();
+        let t_send = self.i18n.t("serial.send").to_string();
+        let t_type_cmd = self.i18n.t("serial.type_command").to_string();
         div()
             .flex_1()
             .flex()
@@ -33,7 +38,7 @@ impl SparkApp {
                             .border_1()
                             .border_color(glass_border())
                             .child(div().text_sm().child("🔌"))
-                            .child(div().text_sm().text_color(rgb(TEXT_SECONDARY)).child("Select Port"))
+                            .child(div().text_sm().text_color(rgb(TEXT_SECONDARY)).child(t_select_port))
                             .child(div().text_xs().text_color(rgb(TEXT_MUTED)).child("▼")),
                     )
                     // Refresh
@@ -73,7 +78,7 @@ impl SparkApp {
                             .text_color(rgb(0xffffff))
                             .cursor_pointer()
                             .hover(|s| s.opacity(0.85))
-                            .child("Connect"),
+                            .child(t_connect),
                     )
                     .child(div().flex_1())
                     // Clear
@@ -86,7 +91,7 @@ impl SparkApp {
                             .text_sm()
                             .text_color(rgb(TEXT_MUTED))
                             .hover(|s| s.text_color(rgb(TEXT_PRIMARY)).bg(hsla(0., 0., 0.5, 0.1)))
-                            .child("🗑 Clear"),
+                            .child(format!("🗑 {}", t_clear)),
                     )
                     // Auto-scroll
                     .child(
@@ -150,7 +155,7 @@ impl SparkApp {
                             .border_1()
                             .border_color(glass_border())
                             .child(
-                                div().text_sm().text_color(rgb(TEXT_MUTED)).child("Type command..."),
+                                div().text_sm().text_color(rgb(TEXT_MUTED)).child(t_type_cmd),
                             ),
                     )
                     .child(
@@ -163,7 +168,7 @@ impl SparkApp {
                             .text_color(rgb(0xffffff))
                             .cursor_pointer()
                             .hover(|s| s.opacity(0.85))
-                            .child("Send"),
+                            .child(t_send),
                     ),
             )
     }

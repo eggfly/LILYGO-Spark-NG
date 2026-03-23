@@ -33,7 +33,7 @@ impl SparkApp {
             .p_6()
             .gap_6()
             .overflow_y_scroll()
-            .child(page_header("📄", "Embedded Tools", "Calculators and utilities for embedded development"))
+            .child(page_header("📄", self.i18n.t("tools.title"), self.i18n.t("tools.subtitle")))
             // Tool grid
             .child(
                 {

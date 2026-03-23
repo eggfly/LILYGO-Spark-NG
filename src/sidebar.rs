@@ -68,7 +68,7 @@ impl SparkApp {
                         .mt(px(6.0))
                         .text_xs()
                         .text_color(rgb(TEXT_MUTED))
-                        .child("Made with 🤖 AI & ❤️ Love"),
+                        .child(self.i18n.t("sidebar.made_with").to_string()),
                 ),
         );
 
@@ -138,7 +138,7 @@ impl SparkApp {
                         div()
                             .ml_3()
                             .text_sm()
-                            .child(page.label().to_string()),
+                            .child(self.i18n.t(page.i18n_key()).to_string()),
                     );
 
                     item = item.on_click(cx.listener(move |this, _, _, cx| {
@@ -185,7 +185,7 @@ impl SparkApp {
                             div()
                                 .text_sm()
                                 .text_color(rgb(TEXT_SECONDARY))
-                                .child("Login with GitHub"),
+                                .child(self.i18n.t("sidebar.login_github").to_string()),
                         ),
                 )
                 // Version
