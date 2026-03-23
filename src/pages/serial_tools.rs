@@ -1,0 +1,154 @@
+use gpui::*;
+
+use crate::app::SparkApp;
+use crate::theme::*;
+
+impl SparkApp {
+    pub fn render_serial_tools(&self) -> impl IntoElement {
+        div()
+            .flex_1()
+            .flex()
+            .flex_col()
+            .overflow_hidden()
+            // Toolbar
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .px_4()
+                    .py_2()
+                    .border_b_1()
+                    .border_color(glass_border())
+                    // Port select
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .px_3()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .bg(glass_card())
+                            .border_1()
+                            .border_color(glass_border())
+                            .child(div().text_sm().child("🔌"))
+                            .child(div().text_sm().text_color(rgb(TEXT_SECONDARY)).child("Select Port"))
+                            .child(div().text_xs().text_color(rgb(TEXT_MUTED)).child("▼")),
+                    )
+                    // Refresh
+                    .child(
+                        div()
+                            .px_2()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .cursor_pointer()
+                            .text_color(rgb(TEXT_MUTED))
+                            .hover(|s| s.text_color(rgb(TEXT_PRIMARY)).bg(hsla(0., 0., 0.5, 0.1)))
+                            .child("🔄"),
+                    )
+                    // Baud rate
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .px_3()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .bg(glass_card())
+                            .border_1()
+                            .border_color(glass_border())
+                            .child(div().text_sm().text_color(rgb(TEXT_SECONDARY)).child("115200"))
+                            .child(div().text_xs().text_color(rgb(TEXT_MUTED)).child("▼")),
+                    )
+                    // Connect button
+                    .child(
+                        div()
+                            .px_4()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .bg(rgb(GREEN))
+                            .text_sm()
+                            .text_color(rgb(0xffffff))
+                            .cursor_pointer()
+                            .hover(|s| s.opacity(0.85))
+                            .child("Connect"),
+                    )
+                    .child(div().flex_1())
+                    // Clear
+                    .child(
+                        div()
+                            .px_3()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .cursor_pointer()
+                            .text_sm()
+                            .text_color(rgb(TEXT_MUTED))
+                            .hover(|s| s.text_color(rgb(TEXT_PRIMARY)).bg(hsla(0., 0., 0.5, 0.1)))
+                            .child("🗑 Clear"),
+                    )
+                    // Auto-scroll
+                    .child(
+                        div()
+                            .px_3()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .text_sm()
+                            .text_color(rgb(GREEN))
+                            .child("↓ Auto"),
+                    ),
+            )
+            // Terminal area
+            .child(
+                div()
+                    .id("serial-terminal")
+                    .flex_1()
+                    .bg(rgb(0x0d1117))
+                    .p_4()
+                    .overflow_y_scroll()
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(hsla(140. / 360., 0.6, 0.6, 0.9))
+                            .child("// Serial Monitor - Connect a device to start"),
+                    ),
+            )
+            // Input bar
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .px_4()
+                    .py_2()
+                    .border_t_1()
+                    .border_color(glass_border())
+                    .child(
+                        div()
+                            .flex_1()
+                            .px_3()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .bg(hsla(0., 0., 0., 0.2))
+                            .border_1()
+                            .border_color(glass_border())
+                            .child(
+                                div().text_sm().text_color(rgb(TEXT_MUTED)).child("Type command..."),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .px_4()
+                            .py(px(6.0))
+                            .rounded_lg()
+                            .bg(rgb(PRIMARY))
+                            .text_sm()
+                            .text_color(rgb(0xffffff))
+                            .cursor_pointer()
+                            .hover(|s| s.opacity(0.85))
+                            .child("Send"),
+                    ),
+            )
+    }
+}
