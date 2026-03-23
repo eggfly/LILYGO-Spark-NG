@@ -12,12 +12,12 @@
 |----------|:-:|:-:|:-:|
 | Navigation & Layout | 7 | 6 | 86% |
 | Pages (8 total) | 8 | 8 | 100% (structure) |
-| Theme System | 7 | 5 | 71% |
+| Theme System | 7 | 6 | 86% |
 | i18n | 5 | 4 | 80% |
 | Animations & Effects | 7 | 1 | 14% |
 | Data & Backend | 7 | 1 | 14% |
 | Serial/Flash | 7 | 0 | 0% |
-| **Overall** | | | **~55% UI, ~35% functional** |
+| **Overall** | | | **~65% UI, ~40% functional** |
 
 ---
 
@@ -78,7 +78,7 @@
 
 | Feature | Electron | NT | Status |
 |---------|:--------:|:--:|:------:|
-| 4-tab layout (Burner/Dumper/Analyzer/Editor) | ✅ | 📐 | Tabs shown, no switch |
+| 4-tab layout (Burner/Dumper/Analyzer/Editor) | ✅ | ✅ | ✅ Tab switching works |
 | Burner: Basic mode | ✅ | 🟡 | UI layout only |
 | Burner: Advanced mode | ✅ | 🔴 | Missing |
 | Port detection + selection | ✅ | 🔴 | Static dropdown |
@@ -114,7 +114,7 @@
 | Image Converter | ✅ | 🔴 | Missing |
 | Voltage Divider | ✅ | 🔴 | Missing |
 | RC Time Constant | ✅ | 🔴 | Missing |
-| Ohm's Law | ✅ | 🔴 | Missing |
+| Ohm's Law | ✅ | 📐 | Static display |
 | 555 Timer | ✅ | 🔴 | Missing |
 | SMD Resistor | ✅ | 🔴 | Missing |
 | LED Resistor | ✅ | 🔴 | Missing |
@@ -131,7 +131,7 @@
 | Gradient left bar accent | ✅ | ✅ | ✅ |
 | Icon with gradient bg | ✅ | ✅ | ✅ |
 | Hover effects | ✅ | ✅ | ✅ |
-| Click to open links | ✅ | 🔴 | Missing |
+| Click to open links | ✅ | ✅ | ✅ opens in browser |
 
 ### 8. Spark Lab
 
@@ -139,7 +139,7 @@
 |---------|:--------:|:--:|:------:|
 | Sparkling List tab | ✅ | ✅ | ✅ |
 | Guide tab | ✅ | 🔴 | Missing |
-| 4 categories with items | ✅ | 📐 | 2 categories |
+| 4 categories with items | ✅ | ✅ | ✅ All 29 items |
 | Status badges (Shipped/Planned/Spark) | ✅ | ✅ | ✅ |
 | Progress bar | ✅ | ✅ | ✅ |
 | Expandable/collapsible categories | ✅ | 🔴 | Always expanded |
@@ -150,7 +150,7 @@
 |---------|:--------:|:--:|:------:|
 | Language selector | ✅ | ✅ | ✅ (UI + logic) |
 | Theme preference | ✅ | 🟡 | UI only, not applied |
-| Accent color picker | ✅ | ✅ | ✅ |
+| Accent color picker | ✅ | ✅ | ✅ (wired to all pages) |
 | Accent mode (rotating/fixed) | ✅ | 🟡 | UI only |
 | Glass effect toggle | ✅ | 🟡 | UI only |
 | Sound toggle | ✅ | 🟡 | UI only |
@@ -187,17 +187,17 @@
 ## Priority Roadmap
 
 ### P0 - Quick Wins (UI polish, no backend needed)
-1. ~~Firmware center search functionality~~ → wire up search_query filter
-2. ~~Accent color actually applied to sidebar/theme~~ → wire accent to PRIMARY
+1. ~~Firmware center search functionality~~ → search_query logic exists, needs text input widget
+2. ~~Accent color actually applied to sidebar/theme~~ → **DONE** wired to all pages
 3. ~~Theme mode switch (dark/light) applied~~ → change bg/text colors
 4. ~~Page fade-in animation~~ → GPUI AnimationExt
-5. ~~Firmware lab tab switching~~ → add active_lab_tab state
-6. ~~Spark Lab: add missing 2 categories~~ → Embedded Calculators + Creative
+5. ~~Firmware lab tab switching~~ → **DONE** active_lab_tab state + cx.listener
+6. ~~Spark Lab: add missing 2 categories~~ → **DONE** all 4 categories, 29 items
 
 ### P1 - Interactive features
-7. Embedded tools: implement Ohm's Law calculator (simplest)
+7. Embedded tools: implement Ohm's Law calculator (simplest) → **DONE** static display
 8. Embedded tools: implement Resistor Color Code (interactive)
-9. Community page: open-external links
+9. Community page: open-external links → **DONE** opens in default browser
 10. Settings: persist & apply theme/glass/accent
 
 ### P2 - Backend integration

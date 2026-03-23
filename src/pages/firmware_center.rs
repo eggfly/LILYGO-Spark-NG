@@ -28,9 +28,13 @@ impl SparkApp {
             .and_then(|i| self.flat_products.get(i))
             .map(|p| p.description.clone())
             .unwrap_or_default();
-        let selected_mcu = selected_idx
+        let selected_github = selected_idx
             .and_then(|i| self.flat_products.get(i))
-            .map(|p| p.mcu.clone())
+            .map(|p| p.github_repo.clone())
+            .unwrap_or_default();
+        let selected_product_page = selected_idx
+            .and_then(|i| self.flat_products.get(i))
+            .map(|p| p.product_page.clone())
             .unwrap_or_default();
         let firmware_count = self.selected_firmwares.len();
 
@@ -144,7 +148,35 @@ impl SparkApp {
                 );
             }
         } else {
+            let mut last_series: Option<String> = None;
             for (real_idx, product) in filtered {
+                // Series group header
+                if let Some(series) = &product.series_name {
+                    if last_series.as_ref() != Some(series) {
+                        last_series = Some(series.clone());
+                        product_list_div = product_list_div.child(
+                            div()
+                                .px_3()
+                                .pt_3()
+                                .pb_1()
+                                .text_xs()
+                                .text_color(rgb(TEXT_MUTED))
+                                .child(series.clone()),
+                        );
+                    }
+                } else if last_series.is_some() {
+                    last_series = None;
+                    product_list_div = product_list_div.child(
+                        div()
+                            .px_3()
+                            .pt_3()
+                            .pb_1()
+                            .text_xs()
+                            .text_color(rgb(TEXT_MUTED))
+                            .child("Other"),
+                    );
+                }
+
                 let is_selected = selected_idx == Some(real_idx);
                 let idx = real_idx;
 
@@ -342,14 +374,34 @@ impl SparkApp {
                                                     .text_color(rgb(TEXT_MUTED))
                                                     .child(selected_desc),
                                             )
-                                            .child(
+                                            .child({
+                                                let gh = selected_github.clone();
+                                                let pp = selected_product_page.clone();
                                                 div()
                                                     .flex()
                                                     .gap_2()
                                                     .mt_2()
-                                                    .child(Self::header_action_btn("🐙", "GitHub"))
-                                                    .child(Self::header_action_btn("🌐", "Product Page")),
-                                            ),
+                                                    .when(!gh.is_empty(), |d: Div| {
+                                                        let gh = gh.clone();
+                                                        d.child(
+                                                            Self::header_action_btn("🐙", "GitHub")
+                                                                .id("gh-btn")
+                                                                .cursor_pointer()
+                                                                .on_click(move |_, _, _| { let _ = open::that(&gh); }),
+                                                        )
+                                                    })
+                                                    .when(gh.is_empty(), |d: Div| d.child(Self::header_action_btn("🐙", "GitHub")))
+                                                    .when(!pp.is_empty(), |d: Div| {
+                                                        let pp = pp.clone();
+                                                        d.child(
+                                                            Self::header_action_btn("🌐", "Product Page")
+                                                                .id("pp-btn")
+                                                                .cursor_pointer()
+                                                                .on_click(move |_, _, _| { let _ = open::that(&pp); }),
+                                                        )
+                                                    })
+                                                    .when(pp.is_empty(), |d: Div| d.child(Self::header_action_btn("🌐", "Product Page")))
+                                            }),
                                     )
                                     .child(
                                         div()
