@@ -13,4 +13,4 @@ gpui = "0.2.2"
 name = "LILYGO Spark NT"
 identifier = "cc.lilygo.spark-nt"
 icon = ["resources/app-icon.png"]
-osx_minimum_system_version = "10.15"
+osx_minimum_system_version = "10.15.7"
