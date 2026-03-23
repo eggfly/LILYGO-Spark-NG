@@ -8,6 +8,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
   APP_NAME: lilygo-spark-nt
@@ -54,10 +57,8 @@ jobs:
           mkdir -p "dist/${APP_BUNDLE}/Contents/MacOS"
           mkdir -p "dist/${APP_BUNDLE}/Contents/Resources"
 
-          # Copy binary
           cp "target/${{ matrix.target }}/release/${{ env.APP_NAME }}" "dist/${APP_BUNDLE}/Contents/MacOS/"
 
-          # Generate .icns from app-icon.png
           mkdir -p AppIcon.iconset
           SRC="resources/app-icon.png"
           sips -z 16 16     "$SRC" --out AppIcon.iconset/icon_16x16.png
@@ -73,7 +74,6 @@ jobs:
           iconutil -c icns AppIcon.iconset -o "dist/${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
           rm -rf AppIcon.iconset
 
-          # Create Info.plist
           cat > "dist/${APP_BUNDLE}/Contents/Info.plist" << PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -112,25 +112,24 @@ jobs:
             --app-drop-link 425 190 \
             --skip-jenkins \
             --hdiutil-retries 15 \
-            "${{ env.APP_DISPLAY_NAME }}-${{ matrix.target }}.dmg" \
+            "${{ env.APP_NAME }}-macos-${{ matrix.target }}.dmg" \
             "dist/" \
           || true
 
-          # Fallback: if create-dmg fails, make a zip
-          if [ ! -f "${{ env.APP_DISPLAY_NAME }}-${{ matrix.target }}.dmg" ]; then
+          if [ ! -f "${{ env.APP_NAME }}-macos-${{ matrix.target }}.dmg" ]; then
             echo "create-dmg failed, falling back to zip"
             cd dist
-            zip -r "../${{ env.APP_DISPLAY_NAME }}-${{ matrix.target }}.zip" "${{ env.APP_DISPLAY_NAME }}.app"
+            zip -r "../${{ env.APP_NAME }}-macos-${{ matrix.target }}.zip" "${{ env.APP_DISPLAY_NAME }}.app"
             cd ..
           fi
 
-      - name: Upload DMG artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APP_NAME }}-macos-${{ matrix.target }}
           path: |
-            ${{ env.APP_DISPLAY_NAME }}-${{ matrix.target }}.dmg
-            ${{ env.APP_DISPLAY_NAME }}-${{ matrix.target }}.zip
+            ${{ env.APP_NAME }}-macos-${{ matrix.target }}.dmg
+            ${{ env.APP_NAME }}-macos-${{ matrix.target }}.zip
           if-no-files-found: ignore
 
   build-windows:
@@ -164,8 +163,8 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist
           Copy-Item "target/${{ matrix.target }}/release/${{ env.APP_NAME }}.exe" "dist/"
-          Copy-Item "resources/app-icon.png" "dist/"
-          Copy-Item "LICENSE" "dist/"
+          if (Test-Path "resources/app-icon.png") { Copy-Item "resources/app-icon.png" "dist/" }
+          if (Test-Path "LICENSE") { Copy-Item "LICENSE" "dist/" }
           Compress-Archive -Path "dist/*" -DestinationPath "${{ env.APP_NAME }}-windows-${{ matrix.target }}.zip"
 
       - name: Upload artifact
@@ -174,12 +173,67 @@ jobs:
           name: ${{ env.APP_NAME }}-windows-${{ matrix.target }}
           path: ${{ env.APP_NAME }}-windows-${{ matrix.target }}.zip
 
-  release:
-    needs: [build-macos, build-windows]
+  build-linux:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc g++ cmake clang lld \
+            libasound2-dev \
+            libfontconfig-dev \
+            libglib2.0-dev \
+            libssl-dev \
+            libvulkan1 \
+            libwayland-dev \
+            libx11-xcb-dev \
+            libxkbcommon-x11-dev \
+            libzstd-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: Build (Release)
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package Linux
+        run: |
+          mkdir -p dist/${{ env.APP_NAME }}
+          cp "target/${{ matrix.target }}/release/${{ env.APP_NAME }}" "dist/${{ env.APP_NAME }}/"
+          if [ -f resources/app-icon.png ]; then cp resources/app-icon.png "dist/${{ env.APP_NAME }}/"; fi
+          if [ -f LICENSE ]; then cp LICENSE "dist/${{ env.APP_NAME }}/"; fi
+          if [ -f README.md ]; then cp README.md "dist/${{ env.APP_NAME }}/"; fi
+          cd dist
+          tar czf "../${{ env.APP_NAME }}-linux-${{ matrix.target }}.tar.gz" "${{ env.APP_NAME }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-linux-${{ matrix.target }}
+          path: ${{ env.APP_NAME }}-linux-${{ matrix.target }}.tar.gz
+
+  release:
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
 
@@ -189,12 +243,40 @@ jobs:
           path: artifacts
 
       - name: List artifacts
-        run: find artifacts -type f | head -20
+        run: find artifacts -type f | head -30
 
-      - name: Create Release
+      - name: Gather release files
+        run: |
+          mkdir -p release-files
+          find artifacts -type f \( -name "*.dmg" -o -name "*.zip" -o -name "*.tar.gz" \) -exec cp {} release-files/ \;
+          ls -lh release-files/
+
+      - name: Release (tagged)
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/**/*.dmg
-            artifacts/**/*.zip
+          files: release-files/*
           generate_release_notes: true
+
+      - name: Release (latest)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest Build"
+          body: |
+            Automated build from `main` branch.
+
+            **Commit:** ${{ github.sha }}
+            **Time:** ${{ github.event.head_commit.timestamp }}
+
+            ---
+            | Platform | File |
+            |----------|------|
+            | macOS (Apple Silicon) | `*-aarch64-apple-darwin.dmg` |
+            | macOS (Intel) | `*-x86_64-apple-darwin.dmg` |
+            | Windows | `*-windows-*.zip` |
+            | Linux | `*-linux-*.tar.gz` |
+          files: release-files/*
+          prerelease: true
+          make_latest: false
