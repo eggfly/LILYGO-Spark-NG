@@ -13,10 +13,10 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  APP_NAME: lilygo-spark-nt
-  APP_DISPLAY_NAME: "LILYGO Spark NT"
+  APP_NAME: lilygo-spark-ng
+  APP_DISPLAY_NAME: "LILYGO Spark NG"
   APP_VERSION: "0.1.0"
-  APP_IDENTIFIER: "cc.lilygo.spark-nt"
+  APP_IDENTIFIER: "cc.lilygo.spark-ng"
 
 jobs:
   setup:

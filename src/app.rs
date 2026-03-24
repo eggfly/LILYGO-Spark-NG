@@ -212,20 +212,20 @@ fn dirs_next() -> Option<std::path::PathBuf> {
             std::path::PathBuf::from(h)
                 .join("Library")
                 .join("Application Support")
-                .join("LILYGO Spark NT")
+                .join("LILYGO Spark NG")
         })
     }
     #[cfg(target_os = "windows")]
     {
         std::env::var("APPDATA")
             .ok()
-            .map(|h| std::path::PathBuf::from(h).join("LILYGO Spark NT"))
+            .map(|h| std::path::PathBuf::from(h).join("LILYGO Spark NG"))
     }
     #[cfg(target_os = "linux")]
     {
         std::env::var("HOME")
             .ok()
-            .map(|h| std::path::PathBuf::from(h).join(".config").join("lilygo-spark-nt"))
+            .map(|h| std::path::PathBuf::from(h).join(".config").join("lilygo-spark-ng"))
     }
 }
 
@@ -488,7 +488,7 @@ impl SparkApp {
                     .pl(px(12.0))
                     .text_xs()
                     .text_color(rgb(TEXT_MUTED))
-                    .child("LILYGO Spark NT"),
+                    .child("LILYGO Spark NG"),
             )
             .child(
                 div()

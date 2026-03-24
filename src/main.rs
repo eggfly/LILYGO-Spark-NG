@@ -29,7 +29,7 @@ fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .init();
 
-    log::info!("Starting LILYGO Spark NT v{}", env!("CARGO_PKG_VERSION"));
+    log::info!("Starting LILYGO Spark NG v{}", env!("CARGO_PKG_VERSION"));
 
     Application::new().run(|cx: &mut App| {
         // Register global action handlers
@@ -110,7 +110,7 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 window_background: WindowBackgroundAppearance::Blurred,
                 titlebar: Some(TitlebarOptions {
-                    title: Some("LILYGO Spark NT".into()),
+                    title: Some("LILYGO Spark NG".into()),
                     appears_transparent: true,
                     traffic_light_position: Some(point(px(12.0), px(12.0))),
                 }),

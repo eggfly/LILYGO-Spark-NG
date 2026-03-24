@@ -1,10 +1,10 @@
 [package]
-name = "lilygo-spark-nt"
+name = "lilygo-spark-ng"
 version = "0.1.0"
 edition = "2024"
-description = "LILYGO Spark NT - A GPUI-based cross-platform desktop application"
+description = "LILYGO Spark NG - A GPUI-based cross-platform desktop application"
 license = "MIT"
-repository = "https://github.com/eggfly/LILYGO-Spark-NT"
+repository = "https://github.com/eggfly/LILYGO-Spark-NG"
 
 [dependencies]
 gpui = "0.2.2"
@@ -24,7 +24,7 @@ windows = { version = "0.58", features = ["Wdk_System_SystemServices", "Win32_Fo
 winresource = "0.1"
 
 [package.metadata.bundle]
-name = "LILYGO Spark NT"
-identifier = "cc.lilygo.spark-nt"
+name = "LILYGO Spark NG"
+identifier = "cc.lilygo.spark-ng"
 icon = ["resources/app-icon.png"]
 osx_minimum_system_version = "10.15.7"

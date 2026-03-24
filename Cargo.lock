@@ -3054,7 +3054,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lilygo-spark-nt"
+name = "lilygo-spark-ng"
 version = "0.1.0"
 dependencies = [
  "env_logger",

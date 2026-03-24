@@ -9,8 +9,8 @@ fn main() {
 
             let mut res = winresource::WindowsResource::new();
             res.set_icon(icon);
-            res.set("FileDescription", "LILYGO Spark NT");
-            res.set("ProductName", "LILYGO Spark NT");
+            res.set("FileDescription", "LILYGO Spark NG");
+            res.set("ProductName", "LILYGO Spark NG");
 
             if let Err(e) = res.compile() {
                 eprintln!("cargo:warning=Failed to set Windows resource: {}", e);

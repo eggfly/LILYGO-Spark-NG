@@ -1,4 +1,4 @@
-# LILYGO Spark NT - 开发与打包指南
+# LILYGO Spark NG - 开发与打包指南
 
 ## 开发构建
 
@@ -13,7 +13,7 @@ cargo run
 cargo build --release
 ```
 
-编译产物在 `target/release/lilygo-spark-nt`。
+编译产物在 `target/release/lilygo-spark-ng`。
 
 ## macOS 打包 DMG
 
@@ -29,13 +29,13 @@ cargo bundle --release
 
 # 生成 DMG
 create-dmg \
-  --volname "LILYGO Spark NT" \
+  --volname "LILYGO Spark NG" \
   --window-pos 200 120 \
   --window-size 600 400 \
   --icon-size 100 \
-  --icon "LILYGO Spark NT.app" 175 190 \
+  --icon "LILYGO Spark NG.app" 175 190 \
   --app-drop-link 425 190 \
-  "LILYGO-Spark-NT.dmg" \
+  "LILYGO-Spark-NG.dmg" \
   "target/release/bundle/osx/"
 ```
 
@@ -48,8 +48,8 @@ create-dmg \
 cargo build --release
 
 # 2. 创建 .app 目录结构
-APP_NAME="lilygo-spark-nt"
-APP_DISPLAY_NAME="LILYGO Spark NT"
+APP_NAME="lilygo-spark-ng"
+APP_DISPLAY_NAME="LILYGO Spark NG"
 APP_BUNDLE="${APP_DISPLAY_NAME}.app"
 
 mkdir -p "dist/${APP_BUNDLE}/Contents/MacOS"
@@ -83,15 +83,15 @@ cat > "dist/${APP_BUNDLE}/Contents/Info.plist" << 'PLIST'
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
-  <string>LILYGO Spark NT</string>
+  <string>LILYGO Spark NG</string>
   <key>CFBundleIdentifier</key>
-  <string>cc.lilygo.spark-nt</string>
+  <string>cc.lilygo.spark-ng</string>
   <key>CFBundleVersion</key>
   <string>0.1.0</string>
   <key>CFBundleShortVersionString</key>
   <string>0.1.0</string>
   <key>CFBundleExecutable</key>
-  <string>lilygo-spark-nt</string>
+  <string>lilygo-spark-ng</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleIconFile</key>
@@ -107,13 +107,13 @@ PLIST
 # 5. 生成 DMG
 brew install create-dmg
 create-dmg \
-  --volname "LILYGO Spark NT" \
+  --volname "LILYGO Spark NG" \
   --window-pos 200 120 \
   --window-size 600 400 \
   --icon-size 100 \
-  --icon "LILYGO Spark NT.app" 175 190 \
+  --icon "LILYGO Spark NG.app" 175 190 \
   --app-drop-link 425 190 \
-  "LILYGO-Spark-NT.dmg" \
+  "LILYGO-Spark-NG.dmg" \
   "dist/"
 ```
 
@@ -141,11 +141,11 @@ sudo apt-get install -y \
 ```bash
 cargo build --release
 
-mkdir -p dist/lilygo-spark-nt
-cp target/release/lilygo-spark-nt dist/lilygo-spark-nt/
-cp resources/app-icon.png dist/lilygo-spark-nt/
+mkdir -p dist/lilygo-spark-ng
+cp target/release/lilygo-spark-ng dist/lilygo-spark-ng/
+cp resources/app-icon.png dist/lilygo-spark-ng/
 cd dist
-tar czf ../lilygo-spark-nt-linux-x86_64.tar.gz lilygo-spark-nt
+tar czf ../lilygo-spark-ng-linux-x86_64.tar.gz lilygo-spark-ng
 ```
 
 ## GitHub Actions CI
