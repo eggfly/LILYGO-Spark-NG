@@ -1,9 +1,10 @@
+use std::time::Duration;
+
 use gpui::*;
 
 use crate::i18n::{I18n, Language};
 use crate::manifest::{self, FlatProduct, FirmwareItem, Manifest};
 use crate::pages::Page;
-use crate::theme::*;
 
 // Settings enums
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -164,6 +165,8 @@ pub struct SparkApp {
     pub active_lab_tab: usize, // 0=Burner, 1=Dumper, 2=Analyzer, 3=Partition
     // Embedded Tools state
     pub active_tool_idx: usize, // 0-11 tool index
+    // Animation
+    pub page_transition_id: usize,
 }
 
 impl SparkApp {
@@ -192,11 +195,13 @@ impl SparkApp {
             canary_update: false,
             active_lab_tab: 0,
             active_tool_idx: 0,
+            page_transition_id: 0,
         }
     }
 
     pub fn navigate(&mut self, page: Page, cx: &mut Context<Self>) {
         self.current_page = page;
+        self.page_transition_id += 1;
         cx.notify();
     }
 
@@ -279,7 +284,7 @@ impl SparkApp {
 
 impl Render for SparkApp {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let content: AnyElement = match self.current_page {
+        let page_content = match self.current_page {
             Page::Discovery => self.render_discovery().into_any_element(),
             Page::FirmwareCenter => self.render_firmware_center(cx).into_any_element(),
             Page::FirmwareLab => self.render_firmware_lab(cx).into_any_element(),
@@ -289,6 +294,18 @@ impl Render for SparkApp {
             Page::SparkLab => self.render_spark_lab().into_any_element(),
             Page::Settings => self.render_settings(cx).into_any_element(),
         };
+
+        // Wrap content with fade-in animation on page change
+        let transition_id = self.page_transition_id;
+        let content = div()
+            .size_full()
+            .child(page_content)
+            .with_animation(
+                SharedString::from(format!("page-fade-{}", transition_id)),
+                Animation::new(Duration::from_millis(150)).with_easing(ease_in_out),
+                |div, delta| div.opacity(delta),
+            )
+            .into_any_element();
 
         let mut root = div()
             .size_full()
