@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::i18n::{I18n, Language};
 use crate::manifest::{self, FlatProduct, FirmwareItem, Manifest};
 use crate::pages::Page;
+use crate::theme::{TEXT_MUTED, TEXT_SECONDARY};
 
 // Settings enums
 #[derive(Clone, Copy, PartialEq, Debug)]
