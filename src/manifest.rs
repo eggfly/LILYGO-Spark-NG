@@ -75,6 +75,12 @@ pub struct BinFile {
     pub source_code_url: Option<String>,
     #[serde(default)]
     pub author_name: Option<String>,
+    #[serde(default)]
+    pub author_link: Option<String>,
+    #[serde(default)]
+    pub author_email: Option<String>,
+    #[serde(default)]
+    pub published_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -101,7 +107,19 @@ pub struct Firmware {
     #[serde(default)]
     pub sha256: Option<String>,
     #[serde(default)]
+    pub compressed_size: Option<u64>,
+    #[serde(default)]
     pub source_code_url: Option<String>,
+    #[serde(default)]
+    pub author_name: Option<String>,
+    #[serde(default)]
+    pub author_link: Option<String>,
+    #[serde(default)]
+    pub author_email: Option<String>,
+    #[serde(default)]
+    pub release_note: Option<String>,
+    #[serde(default)]
+    pub hash_md5: Option<String>,
 }
 
 /// A flattened product entry for display in the product list
@@ -169,8 +187,13 @@ impl Manifest {
                     download_url: fw.download_url.clone(),
                     description: fw.description.clone(),
                     size: fw.size,
+                    compressed_size: fw.compressed_size,
                     oss_url: fw.oss_url.clone(),
-                    md5: fw.md5.clone(),
+                    md5: fw.md5.clone().or(fw.hash_md5.clone()),
+                    source_code_url: fw.source_code_url.clone(),
+                    author_name: fw.author_name.clone(),
+                    author_link: fw.author_link.clone(),
+                    release_note: fw.release_note.clone(),
                 });
             }
         }
@@ -187,8 +210,13 @@ impl Manifest {
                     download_url: bf.url.clone(),
                     description: bf.path.clone().unwrap_or_default(),
                     size: bf.size,
+                    compressed_size: bf.compressed_size,
                     oss_url: bf.oss_url.clone(),
                     md5: bf.md5.clone(),
+                    source_code_url: bf.source_code_url.clone().or_else(|| derive_source_code_url(&bf.url)),
+                    author_name: bf.author_name.clone(),
+                    author_link: bf.author_link.clone(),
+                    release_note: None,
                 });
             }
         }
@@ -207,8 +235,13 @@ pub struct FirmwareItem {
     pub download_url: String,
     pub description: String,
     pub size: Option<u64>,
+    pub compressed_size: Option<u64>,
     pub oss_url: Option<String>,
     pub md5: Option<String>,
+    pub source_code_url: Option<String>,
+    pub author_name: Option<String>,
+    pub author_link: Option<String>,
+    pub release_note: Option<String>,
 }
 
 impl FirmwareItem {
@@ -222,8 +255,54 @@ impl FirmwareItem {
     }
 }
 
+/// Derive GitHub repo URL from a raw download URL
+fn derive_source_code_url(url: &str) -> Option<String> {
+    // https://raw.githubusercontent.com/org/repo/... -> https://github.com/org/repo
+    if let Some(rest) = url.strip_prefix("https://raw.githubusercontent.com/") {
+        let parts: Vec<&str> = rest.splitn(3, '/').collect();
+        if parts.len() >= 2 {
+            return Some(format!("https://github.com/{}/{}", parts[0], parts[1]));
+        }
+    }
+    // https://github.com/org/repo/... -> https://github.com/org/repo
+    if let Some(rest) = url.strip_prefix("https://github.com/") {
+        let parts: Vec<&str> = rest.splitn(3, '/').collect();
+        if parts.len() >= 2 {
+            return Some(format!("https://github.com/{}/{}", parts[0], parts[1]));
+        }
+    }
+    None
+}
+
 /// Load manifest from the local LILYGO-Spark project (for development)
 pub fn load_manifest_from_file(path: &str) -> Result<Manifest, String> {
     let content = std::fs::read_to_string(path).map_err(|e| format!("Failed to read manifest: {}", e))?;
     serde_json::from_str(&content).map_err(|e| format!("Failed to parse manifest: {}", e))
+}
+
+/// OSS base URL
+pub const OSS_BASE_URL: &str = "https://lilygo.oss-accelerate.aliyuncs.com";
+
+/// OSS manifest URL
+pub const MANIFEST_URL: &str = "https://lilygo.oss-accelerate.aliyuncs.com/firmware_manifest.json";
+
+/// Load manifest from network (OSS) - uses blocking HTTP in a thread
+/// because GPUI's async runtime doesn't include tokio (reqwest async needs it)
+pub fn load_manifest_from_url_blocking(url: &str) -> Result<Manifest, String> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("HTTP client error: {}", e))?;
+
+    let resp = client.get(url).send()
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+
+    let text = resp.text()
+        .map_err(|e| format!("Read error: {}", e))?;
+
+    serde_json::from_str(&text).map_err(|e| format!("Parse error: {}", e))
 }

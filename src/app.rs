@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use std::time::Duration;
 
 use gpui::*;
@@ -162,6 +164,8 @@ pub struct SparkApp {
     pub advanced_expanded: bool,
     pub developer_mode: bool,
     pub canary_update: bool,
+    // Firmware Center collapsible series
+    pub expanded_series: HashSet<String>,
     // Firmware Lab state
     pub active_lab_tab: usize, // 0=Burner, 1=Dumper, 2=Analyzer, 3=Partition
     // Embedded Tools state
@@ -172,6 +176,9 @@ pub struct SparkApp {
     pub news_error: Option<String>,
     // Animation
     pub page_transition_id: usize,
+    // Product image cache: product_id -> RenderImage
+    pub product_images: HashMap<String, Arc<RenderImage>>,
+    pub loading_images: HashSet<String>,
 }
 
 #[derive(Clone)]
@@ -277,12 +284,15 @@ impl SparkApp {
             advanced_expanded: false,
             developer_mode: saved.developer_mode.unwrap_or(false),
             canary_update: false,
+            expanded_series: HashSet::new(),
             active_lab_tab: 0,
             active_tool_idx: 0,
             news_items: Vec::new(),
             news_loading: false,
             news_error: None,
             page_transition_id: 0,
+            product_images: HashMap::new(),
+            loading_images: HashSet::new(),
         }
     }
 
@@ -298,33 +308,36 @@ impl SparkApp {
         cx.notify();
 
         cx.spawn(async |this: WeakEntity<Self>, cx: &mut AsyncApp| {
-            let feeds = [
-                ("Hackaday", "https://hackaday.com/category/esp32/feed/"),
-                ("CNX Software", "https://www.cnx-software.com/feed/"),
-                ("Adafruit", "https://blog.adafruit.com/feed/"),
-            ];
+            let all_items = smol::unblock(|| {
+                let feeds = [
+                    ("Hackaday", "https://hackaday.com/category/esp32/feed/"),
+                    ("CNX Software", "https://www.cnx-software.com/feed/"),
+                    ("Adafruit", "https://blog.adafruit.com/feed/"),
+                ];
 
-            let client = reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()
-                .unwrap();
+                let client = reqwest::blocking::Client::builder()
+                    .timeout(Duration::from_secs(10))
+                    .build()
+                    .unwrap();
 
-            let mut all_items: Vec<NewsItem> = Vec::new();
-            for (source, url) in &feeds {
-                match client.get(*url).send().await {
-                    Ok(resp) => {
-                        if let Ok(text) = resp.text().await {
-                            let items = parse_rss_items(&text, source);
-                            all_items.extend(items.into_iter().take(5));
+                let mut items: Vec<NewsItem> = Vec::new();
+                for (source, url) in &feeds {
+                    match client.get(*url).send() {
+                        Ok(resp) => {
+                            if let Ok(text) = resp.text() {
+                                let parsed = parse_rss_items(&text, source);
+                                items.extend(parsed.into_iter().take(5));
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to fetch {}: {}", source, e);
                         }
                     }
-                    Err(e) => {
-                        log::warn!("Failed to fetch {}: {}", source, e);
-                    }
                 }
-            }
 
-            all_items.sort_by(|a, b| b.date.cmp(&a.date));
+                items.sort_by(|a, b| b.date.cmp(&a.date));
+                items
+            }).await;
 
             let _ = this.update(cx, |this, cx| {
                 this.news_loading = false;
@@ -344,43 +357,84 @@ impl SparkApp {
         self.manifest_error = None;
         cx.notify();
 
-        // Try to load from the sibling LILYGO-Spark project
-        let manifest_paths = [
-            "../LILYGO-Spark/firmware_manifest.json".to_string(),
-            "firmware_manifest.json".to_string(),
-        ];
-
-        let mut loaded = false;
-        for path in &manifest_paths {
-            match manifest::load_manifest_from_file(path) {
-                Ok(m) => {
-                    log::info!("Loaded manifest from {} ({} product groups, {} firmwares)",
-                        path, m.product_list.len(), m.firmware_list.len());
-                    self.flat_products = m.flat_products();
-                    log::info!("Flattened to {} products", self.flat_products.len());
-                    self.manifest = m;
-                    self.manifest_loading = false;
-
-                    // Select first product
-                    if !self.flat_products.is_empty() {
-                        self.select_product(0);
+        // Use a background thread for blocking HTTP, then update via cx.spawn
+        let url = manifest::MANIFEST_URL.to_string();
+        cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
+            // Run blocking HTTP in a thread pool
+            let result = smol::unblock(move || {
+                log::info!("Fetching manifest from OSS: {}", url);
+                match manifest::load_manifest_from_url_blocking(&url) {
+                    Ok(m) => {
+                        log::info!("Loaded manifest from OSS ({} product groups, {} firmwares)",
+                            m.product_list.len(), m.firmware_list.len());
+                        return Ok(m);
                     }
-                    loaded = true;
-                    break;
+                    Err(e) => {
+                        log::warn!("OSS manifest fetch failed: {}, trying local fallback...", e);
+                    }
+                }
+
+                // Fallback to local files
+                let manifest_paths = [
+                    "../LILYGO-Spark/firmware_manifest.json",
+                    "firmware_manifest.json",
+                ];
+
+                for path in &manifest_paths {
+                    match manifest::load_manifest_from_file(path) {
+                        Ok(m) => {
+                            log::info!("Loaded manifest from local {} ({} product groups, {} firmwares)",
+                                path, m.product_list.len(), m.firmware_list.len());
+                            return Ok(m);
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to load from {}: {}", path, e);
+                        }
+                    }
+                }
+
+                Err("Could not load firmware manifest from any source".to_string())
+            }).await;
+
+            match result {
+                Ok(m) => {
+                    let _ = this.update(cx, |this, cx| {
+                        this.apply_manifest(m);
+                        cx.notify();
+                    });
                 }
                 Err(e) => {
-                    log::warn!("Failed to load from {}: {}", path, e);
+                    let _ = this.update(cx, |this, cx| {
+                        this.manifest_loading = false;
+                        this.manifest_error = Some(e.clone());
+                        log::error!("{}", e);
+                        cx.notify();
+                    });
+                }
+            }
+        }).detach();
+    }
+
+    fn apply_manifest(&mut self, m: Manifest) {
+        self.flat_products = m.flat_products();
+        log::info!("Flattened to {} products", self.flat_products.len());
+        self.manifest = m;
+        self.manifest_loading = false;
+        self.manifest_error = None;
+
+        // Expand only the first series and select its first product
+        self.expanded_series.clear();
+        if let Some(first_group) = self.manifest.product_list.first() {
+            if let Some(id) = &first_group.id {
+                if first_group.products.is_some() {
+                    self.expanded_series.insert(id.clone());
                 }
             }
         }
 
-        if !loaded {
-            self.manifest_loading = false;
-            self.manifest_error = Some("Could not find firmware_manifest.json".to_string());
-            log::error!("Failed to load manifest from any path");
+        if !self.flat_products.is_empty() {
+            self.select_product(0);
         }
-
-        cx.notify();
     }
 
     pub fn select_product(&mut self, idx: usize) {
@@ -389,6 +443,104 @@ impl SparkApp {
             self.selected_firmwares = self.manifest.firmware_for_product(&product.product_id);
             log::info!("Selected product: {} ({} firmwares)", product.name, self.selected_firmwares.len());
         }
+    }
+
+    /// Resolve an image URL - for relative paths, try local filesystem first
+    fn resolve_image_url(url: &str) -> Option<String> {
+        if url.starts_with("http://") || url.starts_with("https://") {
+            return Some(url.to_string());
+        }
+        let path = url.strip_prefix('/').unwrap_or(url);
+        // Try local filesystem paths (development)
+        let local_paths = [
+            format!("../LILYGO-Spark/public/{}", path),
+            format!("public/{}", path),
+        ];
+        for local in &local_paths {
+            if std::path::Path::new(local).exists() {
+                return Some(format!("file://{}", std::fs::canonicalize(local).unwrap().display()));
+            }
+        }
+        // Fallback to OSS (may not exist yet)
+        Some(format!("{}/{}", manifest::OSS_BASE_URL, path))
+    }
+
+    /// Load a product image from its URL asynchronously
+    pub fn load_product_image(&mut self, product_id: String, image_url: String, cx: &mut Context<Self>) {
+        if self.product_images.contains_key(&product_id) || self.loading_images.contains(&product_id) {
+            return;
+        }
+        if image_url.is_empty() {
+            return;
+        }
+        let resolved_url = match Self::resolve_image_url(&image_url) {
+            Some(u) => u,
+            None => return,
+        };
+        self.loading_images.insert(product_id.clone());
+
+        let pid = product_id.clone();
+        log::info!("Loading product image: {} -> {}", pid, resolved_url);
+        cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
+            let result = smol::unblock(move || {
+                let bytes = if resolved_url.starts_with("file://") {
+                    let path = resolved_url.strip_prefix("file://").unwrap();
+                    std::fs::read(path)
+                        .map_err(|e| format!("File read error: {}", e))?
+                } else {
+                    let client = reqwest::blocking::Client::builder()
+                        .timeout(Duration::from_secs(15))
+                        .build()
+                        .map_err(|e| format!("Client error: {}", e))?;
+
+                    let resp = client.get(&resolved_url).send()
+                        .map_err(|e| format!("Fetch error: {}", e))?;
+
+                    if !resp.status().is_success() {
+                        return Err(format!("HTTP {}", resp.status()));
+                    }
+
+                    resp.bytes()
+                        .map_err(|e| format!("Read error: {}", e))?
+                        .to_vec()
+                };
+
+                // Decode the image
+                let img = image::load_from_memory(&bytes)
+                    .map_err(|e| format!("Decode error: {}", e))?;
+
+                let rgba = img.to_rgba8();
+                let (w, h) = rgba.dimensions();
+                let mut raw = rgba.into_raw();
+
+                // Convert RGBA -> BGRA (GPUI requirement)
+                for pixel in raw.chunks_exact_mut(4) {
+                    pixel.swap(0, 2);
+                }
+
+                let buffer = image::RgbaImage::from_raw(w, h, raw)
+                    .ok_or("Failed to create image buffer")?;
+                let frame = image::Frame::new(buffer);
+                let render = RenderImage::new(smallvec::smallvec![frame]);
+
+                Ok::<Arc<RenderImage>, String>(Arc::new(render))
+            }).await;
+
+            let _ = this.update(cx, |this, cx| {
+                match result {
+                    Ok(render_img) => {
+                        log::info!("Loaded image for {}", pid);
+                        this.loading_images.remove(&pid);
+                        this.product_images.insert(pid, render_img);
+                    }
+                    Err(e) => {
+                        log::warn!("Failed to load image for {}: {}", pid, e);
+                        // Keep in loading_images to prevent retrying
+                    }
+                }
+                cx.notify();
+            });
+        }).detach();
     }
 
     pub fn set_language(&mut self, language: Language, cx: &mut Context<Self>) {

@@ -15,9 +15,9 @@
 | Theme System | 7 | 6 | 86% |
 | i18n | 5 | 4 | 80% |
 | Animations & Effects | 7 | 1 | 14% |
-| Data & Backend | 7 | 3 | 43% |
+| Data & Backend | 7 | 5 | 71% |
 | Serial/Flash | 7 | 0 | 0% |
-| **Overall** | | | **~75% UI, ~45% functional** |
+| **Overall** | | | **~80% UI, ~55% functional** |
 
 ---
 
@@ -49,7 +49,7 @@
 | Page header + subtitle | ✅ | ✅ | ✅ |
 | News card grid | ✅ | ✅ | ✅ |
 | RSS feed fetching (Hackaday, CNX, Adafruit) | ✅ | ✅ | ✅ Async fetch |
-| Card: image, title, summary, date, tags | ✅ | 📐 | No real images |
+| Card: image, title, summary, date, tags | ✅ | 📐 | 3-col grid, no article images |
 | Refresh button | ✅ | ✅ | ✅ Triggers re-fetch |
 | Click to open article | ✅ | ✅ | ✅ Opens in browser |
 | Loading skeletons | ✅ | ✅ | ✅ |
@@ -60,14 +60,21 @@
 
 | Feature | Electron | NG | Status |
 |---------|:--------:|:--:|:------:|
-| 3-column layout (series/products/firmware) | ✅ | 📐 | 2-col in NG |
-| Product series grouping | ✅ | ✅ | ✅ Series headers |
-| Product images | ✅ | 🔴 | Emoji placeholder |
+| 2-column layout (products/firmware) | ✅ | ✅ | ✅ Matching Electron |
+| Collapsible series groups | ✅ | ✅ | ✅ Chevron expand/collapse |
+| Product series grouping | ✅ | ✅ | ✅ Series headers + count |
+| Async manifest from OSS | ✅ | ✅ | ✅ Network + local fallback |
+| Product images | ✅ | ✅ | Async loaded from files |
 | Search bar (functional) | ✅ | ✅ | ✅ Keyboard-driven |
 | "Only with firmware" checkbox | ✅ | ✅ | ✅ Interactive |
 | Product count badge | ✅ | ✅ | ✅ |
 | Product selection + highlight | ✅ | ✅ | ✅ |
-| Firmware list with badges | ✅ | ✅ | ✅ |
+| Firmware list with badges | ✅ | ✅ | ✅ Type badges colored |
+| Firmware: version/file/size | ✅ | ✅ | ✅ Full metadata |
+| Firmware: compressed size + ratio | ✅ | ✅ | ✅ ZIP % display |
+| Firmware: OSS/Origin/Source links | ✅ | ✅ | ✅ Clickable |
+| Firmware: author name + link | ✅ | ✅ | ✅ Clickable |
+| Firmware: release notes | ✅ | ✅ | ✅ Conditional display |
 | Download button | ✅ | ✅ | ✅ Opens in browser |
 | GitHub/Product links | ✅ | ✅ | ✅ Opens in browser |
 | Burn button | ✅ | 🔴 | Missing |

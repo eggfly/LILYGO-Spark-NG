@@ -84,6 +84,11 @@ impl I18n {
         t.insert("fc.no_firmware", ["No firmware found", "未找到固件", "未找到固件", "ファームウェアが見つかりません"]);
         t.insert("fc.download", ["Download", "下载", "下載", "ダウンロード"]);
         t.insert("fc.select_device", ["Select a product", "选择产品", "選擇產品", "製品を選択"]);
+        t.insert("fc.version", ["Version", "版本", "版本", "バージョン"]);
+        t.insert("fc.file", ["File", "文件", "檔案", "ファイル"]);
+        t.insert("fc.origin", ["Origin", "源地址", "源地址", "元URL"]);
+        t.insert("fc.source_code", ["Source Code", "源代码", "原始碼", "ソースコード"]);
+        t.insert("fc.note", ["Note", "说明", "說明", "備考"]);
 
         // Discovery
         t.insert("discovery.title", ["Spark Discovery", "发现", "發現", "ディスカバリー"]);
